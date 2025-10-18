@@ -1,0 +1,856 @@
+{
+  "type": "Program",
+  "nodes": [
+    {
+      "type": "Node",
+      "id": "start",
+      "statements": [
+        {
+          "type": "Say",
+          "text": "Welcome to the adventure!",
+          "interpolations": [],
+          "line": 3
+        },
+        {
+          "type": "Say",
+          "text": "You have #{...} gold and #{...} HP.",
+          "interpolations": [
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "gold"
+              },
+              "start": 9,
+              "end": 9
+            },
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "health"
+              },
+              "start": 25,
+              "end": 25
+            }
+          ],
+          "line": 4
+        },
+        {
+          "type": "Assignment",
+          "variable": "visited_start",
+          "operator": "=",
+          "value": {
+            "type": "Literal",
+            "value": "true"
+          },
+          "line": 6
+        },
+        {
+          "type": "Assignment",
+          "variable": "visit_count",
+          "operator": "=",
+          "value": {
+            "type": "BinaryOp",
+            "operator": "+",
+            "left": {
+              "type": "Variable",
+              "name": "visit_count"
+            },
+            "right": {
+              "type": "Literal",
+              "value": 1
+            }
+          },
+          "line": 7
+        },
+        {
+          "type": "Choice",
+          "text": "Go to shop",
+          "target": "shop",
+          "line": 9
+        },
+        {
+          "type": "Choice",
+          "text": "Go to forest",
+          "target": "forest",
+          "line": 10,
+          "condition": {
+            "type": "BinaryOp",
+            "right": {
+              "type": "Literal",
+              "value": 5
+            },
+            "left": {
+              "type": "Variable",
+              "name": "level"
+            },
+            "operator": ">="
+          }
+        },
+        {
+          "type": "Choice",
+          "text": "Rest at inn",
+          "target": "inn",
+          "line": 11,
+          "condition": {
+            "type": "BinaryOp",
+            "operator": "&&",
+            "left": {
+              "type": "BinaryOp",
+              "right": {
+                "type": "Literal",
+                "value": 20
+              },
+              "left": {
+                "type": "Variable",
+                "name": "gold"
+              },
+              "operator": ">="
+            },
+            "right": {
+              "type": "BinaryOp",
+              "right": {
+                "type": "Literal",
+                "value": 100
+              },
+              "left": {
+                "type": "Variable",
+                "name": "health"
+              },
+              "operator": "<"
+            }
+          }
+        },
+        {
+          "type": "Choice",
+          "text": "Check inventory",
+          "target": "inventory",
+          "line": 12,
+          "condition": {
+            "type": "UnaryOp",
+            "operator": "!",
+            "operand": {
+              "type": "Variable",
+              "name": "inventory_empty"
+            }
+          }
+        },
+        {
+          "type": "Choice",
+          "text": "Quit",
+          "target": "ending",
+          "line": 13
+        }
+      ],
+      "line": 2
+    },
+    {
+      "type": "Node",
+      "id": "shop",
+      "statements": [
+        {
+          "type": "Say",
+          "text": "Welcome to my shop!",
+          "interpolations": [],
+          "line": 17
+        },
+        {
+          "type": "Say",
+          "text": "I have potions for 50 gold.",
+          "interpolations": [],
+          "line": 18
+        },
+        {
+          "type": "Choice",
+          "text": "Buy potion",
+          "target": "buy_potion",
+          "line": 20,
+          "condition": {
+            "type": "BinaryOp",
+            "right": {
+              "type": "Literal",
+              "value": 50
+            },
+            "left": {
+              "type": "Variable",
+              "name": "gold"
+            },
+            "operator": ">="
+          }
+        },
+        {
+          "type": "Choice",
+          "text": "Sell items",
+          "target": "sell_items",
+          "line": 21,
+          "condition": {
+            "type": "BinaryOp",
+            "right": {
+              "type": "Literal",
+              "value": "true"
+            },
+            "left": {
+              "type": "Variable",
+              "name": "has_items"
+            },
+            "operator": "=="
+          }
+        },
+        {
+          "type": "Choice",
+          "text": "Leave",
+          "target": "start",
+          "line": 22
+        }
+      ],
+      "line": 16
+    },
+    {
+      "type": "Node",
+      "id": "buy_potion",
+      "statements": [
+        {
+          "type": "Assignment",
+          "variable": "gold",
+          "operator": "-=",
+          "value": {
+            "type": "Literal",
+            "value": 50
+          },
+          "line": 26
+        },
+        {
+          "type": "Assignment",
+          "variable": "health",
+          "operator": "+=",
+          "value": {
+            "type": "Literal",
+            "value": 30
+          },
+          "line": 27
+        },
+        {
+          "type": "Assignment",
+          "variable": "potions",
+          "operator": "=",
+          "value": {
+            "type": "BinaryOp",
+            "operator": "+",
+            "left": {
+              "type": "Variable",
+              "name": "potions"
+            },
+            "right": {
+              "type": "Literal",
+              "value": 1
+            }
+          },
+          "line": 28
+        },
+        {
+          "type": "Say",
+          "text": "You bought a potion!",
+          "interpolations": [],
+          "line": 30
+        },
+        {
+          "type": "Say",
+          "text": "Health restored to #{...}.",
+          "interpolations": [
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "health"
+              },
+              "start": 19,
+              "end": 19
+            }
+          ],
+          "line": 31
+        },
+        {
+          "type": "Goto",
+          "target": "shop",
+          "line": 33
+        }
+      ],
+      "line": 25
+    },
+    {
+      "type": "Node",
+      "id": "sell_items",
+      "statements": [
+        {
+          "type": "Assignment",
+          "variable": "gold",
+          "operator": "+=",
+          "value": {
+            "type": "FunctionCall",
+            "name": "random",
+            "args": [
+              {
+                "type": "Literal",
+                "value": 10
+              },
+              {
+                "type": "Literal",
+                "value": 50
+              }
+            ]
+          },
+          "line": 37
+        },
+        {
+          "type": "Assignment",
+          "variable": "has_items",
+          "operator": "=",
+          "value": {
+            "type": "Literal",
+            "value": "false"
+          },
+          "line": 38
+        },
+        {
+          "type": "Say",
+          "text": "You sold your items for #{...} gold.",
+          "interpolations": [
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "gold"
+              },
+              "start": 24,
+              "end": 24
+            }
+          ],
+          "line": 40
+        },
+        {
+          "type": "Choice",
+          "text": "Continue shopping",
+          "target": "shop",
+          "line": 42
+        },
+        {
+          "type": "Choice",
+          "text": "Leave",
+          "target": "start",
+          "line": 43
+        }
+      ],
+      "line": 36
+    },
+    {
+      "type": "Node",
+      "id": "forest",
+      "statements": [
+        {
+          "type": "Say",
+          "text": "You enter the dark forest...",
+          "interpolations": [],
+          "line": 47
+        },
+        {
+          "type": "Assignment",
+          "variable": "enemy_hp",
+          "operator": "=",
+          "value": {
+            "type": "FunctionCall",
+            "name": "random",
+            "args": [
+              {
+                "type": "Literal",
+                "value": 20
+              },
+              {
+                "type": "Literal",
+                "value": 50
+              }
+            ]
+          },
+          "line": 49
+        },
+        {
+          "type": "Assignment",
+          "variable": "damage",
+          "operator": "=",
+          "value": {
+            "type": "BinaryOp",
+            "operator": "*",
+            "left": {
+              "type": "Variable",
+              "name": "strength"
+            },
+            "right": {
+              "type": "Literal",
+              "value": 2
+            }
+          },
+          "line": 50
+        },
+        {
+          "type": "Choice",
+          "text": "Attack",
+          "target": "battle",
+          "line": 52,
+          "condition": {
+            "type": "BinaryOp",
+            "right": {
+              "type": "Literal",
+              "value": 0
+            },
+            "left": {
+              "type": "Variable",
+              "name": "enemy_hp"
+            },
+            "operator": ">"
+          }
+        },
+        {
+          "type": "Choice",
+          "text": "Run away",
+          "target": "start",
+          "line": 53
+        }
+      ],
+      "line": 46
+    },
+    {
+      "type": "Node",
+      "id": "battle",
+      "statements": [
+        {
+          "type": "Assignment",
+          "variable": "enemy_hp",
+          "operator": "=",
+          "value": {
+            "type": "BinaryOp",
+            "operator": "-",
+            "left": {
+              "type": "Variable",
+              "name": "enemy_hp"
+            },
+            "right": {
+              "type": "Variable",
+              "name": "damage"
+            }
+          },
+          "line": 57
+        },
+        {
+          "type": "Assignment",
+          "variable": "health",
+          "operator": "=",
+          "value": {
+            "type": "BinaryOp",
+            "operator": "-",
+            "left": {
+              "type": "Variable",
+              "name": "health"
+            },
+            "right": {
+              "type": "FunctionCall",
+              "name": "random",
+              "args": [
+                {
+                  "type": "Literal",
+                  "value": 5
+                },
+                {
+                  "type": "Literal",
+                  "value": 15
+                }
+              ]
+            }
+          },
+          "line": 58
+        },
+        {
+          "type": "Say",
+          "text": "You deal #{...} damage!",
+          "interpolations": [
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "damage"
+              },
+              "start": 9,
+              "end": 9
+            }
+          ],
+          "line": 60
+        },
+        {
+          "type": "Say",
+          "text": "Enemy HP: #{...}",
+          "interpolations": [
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "enemy_hp"
+              },
+              "start": 10,
+              "end": 10
+            }
+          ],
+          "line": 61
+        },
+        {
+          "type": "Choice",
+          "text": "Continue fighting",
+          "target": "battle",
+          "line": 63,
+          "condition": {
+            "type": "BinaryOp",
+            "operator": "&&",
+            "left": {
+              "type": "BinaryOp",
+              "right": {
+                "type": "Literal",
+                "value": 0
+              },
+              "left": {
+                "type": "Variable",
+                "name": "enemy_hp"
+              },
+              "operator": ">"
+            },
+            "right": {
+              "type": "BinaryOp",
+              "right": {
+                "type": "Literal",
+                "value": 0
+              },
+              "left": {
+                "type": "Variable",
+                "name": "health"
+              },
+              "operator": ">"
+            }
+          }
+        },
+        {
+          "type": "Choice",
+          "text": "Victory!",
+          "target": "victory",
+          "line": 64,
+          "condition": {
+            "type": "BinaryOp",
+            "right": {
+              "type": "Literal",
+              "value": 0
+            },
+            "left": {
+              "type": "Variable",
+              "name": "enemy_hp"
+            },
+            "operator": "<="
+          }
+        },
+        {
+          "type": "Choice",
+          "text": "Defeat...",
+          "target": "defeat",
+          "line": 65,
+          "condition": {
+            "type": "BinaryOp",
+            "right": {
+              "type": "Literal",
+              "value": 0
+            },
+            "left": {
+              "type": "Variable",
+              "name": "health"
+            },
+            "operator": "<="
+          }
+        }
+      ],
+      "line": 56
+    },
+    {
+      "type": "Node",
+      "id": "victory",
+      "statements": [
+        {
+          "type": "Assignment",
+          "variable": "gold",
+          "operator": "=",
+          "value": {
+            "type": "BinaryOp",
+            "operator": "+",
+            "left": {
+              "type": "Variable",
+              "name": "gold"
+            },
+            "right": {
+              "type": "FunctionCall",
+              "name": "random",
+              "args": [
+                {
+                  "type": "Literal",
+                  "value": 50
+                },
+                {
+                  "type": "Literal",
+                  "value": 100
+                }
+              ]
+            }
+          },
+          "line": 69
+        },
+        {
+          "type": "Assignment",
+          "variable": "xp",
+          "operator": "+=",
+          "value": {
+            "type": "Literal",
+            "value": 100
+          },
+          "line": 70
+        },
+        {
+          "type": "Assignment",
+          "variable": "level",
+          "operator": "=",
+          "value": {
+            "type": "BinaryOp",
+            "operator": "+",
+            "left": {
+              "type": "Variable",
+              "name": "level"
+            },
+            "right": {
+              "type": "Literal",
+              "value": 1
+            }
+          },
+          "line": 71
+        },
+        {
+          "type": "Say",
+          "text": "You won the battle!",
+          "interpolations": [],
+          "line": 73
+        },
+        {
+          "type": "Say",
+          "text": "Gained #{...} gold and leveled up!",
+          "interpolations": [
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "gold"
+              },
+              "start": 7,
+              "end": 7
+            }
+          ],
+          "line": 74
+        },
+        {
+          "type": "Goto",
+          "target": "start",
+          "line": 76
+        }
+      ],
+      "line": 68
+    },
+    {
+      "type": "Node",
+      "id": "defeat",
+      "statements": [
+        {
+          "type": "Say",
+          "text": "You were defeated...",
+          "interpolations": [],
+          "line": 80
+        },
+        {
+          "type": "Assignment",
+          "variable": "health",
+          "operator": "=",
+          "value": {
+            "type": "Literal",
+            "value": 100
+          },
+          "line": 81
+        },
+        {
+          "type": "Assignment",
+          "variable": "gold",
+          "operator": "=",
+          "value": {
+            "type": "BinaryOp",
+            "operator": "/",
+            "left": {
+              "type": "Variable",
+              "name": "gold"
+            },
+            "right": {
+              "type": "Literal",
+              "value": 2
+            }
+          },
+          "line": 82
+        },
+        {
+          "type": "Goto",
+          "target": "start",
+          "line": 84
+        }
+      ],
+      "line": 79
+    },
+    {
+      "type": "Node",
+      "id": "inn",
+      "statements": [
+        {
+          "type": "Assignment",
+          "variable": "gold",
+          "operator": "-=",
+          "value": {
+            "type": "Literal",
+            "value": 20
+          },
+          "line": 88
+        },
+        {
+          "type": "Assignment",
+          "variable": "health",
+          "operator": "=",
+          "value": {
+            "type": "Literal",
+            "value": 100
+          },
+          "line": 89
+        },
+        {
+          "type": "Say",
+          "text": "You rest at the inn.",
+          "interpolations": [],
+          "line": 91
+        },
+        {
+          "type": "Say",
+          "text": "Health fully restored!",
+          "interpolations": [],
+          "line": 92
+        },
+        {
+          "type": "Goto",
+          "target": "start",
+          "line": 94
+        }
+      ],
+      "line": 87
+    },
+    {
+      "type": "Node",
+      "id": "inventory",
+      "statements": [
+        {
+          "type": "Say",
+          "text": "Your inventory:",
+          "interpolations": [],
+          "line": 98
+        },
+        {
+          "type": "Say",
+          "text": "Gold: #{...}",
+          "interpolations": [
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "gold"
+              },
+              "start": 6,
+              "end": 6
+            }
+          ],
+          "line": 99
+        },
+        {
+          "type": "Say",
+          "text": "Potions: #{...}",
+          "interpolations": [
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "potions"
+              },
+              "start": 9,
+              "end": 9
+            }
+          ],
+          "line": 100
+        },
+        {
+          "type": "Say",
+          "text": "Level: #{...}",
+          "interpolations": [
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "level"
+              },
+              "start": 7,
+              "end": 7
+            }
+          ],
+          "line": 101
+        },
+        {
+          "type": "Choice",
+          "text": "Back",
+          "target": "start",
+          "line": 103
+        }
+      ],
+      "line": 97
+    },
+    {
+      "type": "Node",
+      "id": "ending",
+      "statements": [
+        {
+          "type": "Say",
+          "text": "Thanks for playing!",
+          "interpolations": [],
+          "line": 107
+        },
+        {
+          "type": "Say",
+          "text": "Final stats:",
+          "interpolations": [],
+          "line": 108
+        },
+        {
+          "type": "Say",
+          "text": "Gold: #{...}, Level: #{...}",
+          "interpolations": [
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "gold"
+              },
+              "start": 6,
+              "end": 6
+            },
+            {
+              "expression": {
+                "type": "Variable",
+                "name": "level"
+              },
+              "start": 21,
+              "end": 21
+            }
+          ],
+          "line": 109
+        }
+      ],
+      "line": 106
+    }
+  ]
+}

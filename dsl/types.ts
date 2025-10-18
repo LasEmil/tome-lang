@@ -77,6 +77,7 @@ export interface DialogueNode {
   id: string;
   statements: Statement[];
   line: number;
+  column: number;
 }
 
 export type Statement =
@@ -92,6 +93,7 @@ export interface AssignmentStatement {
   operator: AssignmentOperator;
   value: Expression;
   line: number;
+  column: number;
 }
 
 export interface SayStatement {
@@ -99,6 +101,7 @@ export interface SayStatement {
   text: string;
   interpolations: Interpolation[];
   line: number;
+  column: number;
 }
 
 export interface Interpolation {
@@ -113,12 +116,14 @@ export interface ChoiceStatement {
   target: string;
   condition?: Expression;
   line: number;
+  column: number;
 }
 
 export interface GotoStatement {
   type: "Goto";
   target: string;
   line: number;
+  column: number;
 }
 
 export type Expression =
