@@ -1,5 +1,5 @@
 import { keywords, literalTypes, operators, symbols } from "./constants.ts";
-import type { TokenType } from "./types.ts";
+import type { Token, TokenType } from "./types.ts";
 
 type LiteralType = typeof literalTypes extends Set<infer U> ? U : never;
 
@@ -23,13 +23,7 @@ class LexerError extends Error {
   }
 }
 
-interface Token {
-  type: TokenType;
-  value: string | number;
-  line: number;
-  column: number;
-}
-function newToken(
+function createToken(
   type: TokenType,
   value: string | number,
   line: number,
@@ -49,13 +43,15 @@ export class Lexer {
   indentChar: " " | "\t" | null = null;
   atLineStart: boolean = true;
 
+  private mode: ("default" | "inString")[] = ["default"];
+
   constructor(public source: string) {
     this.sourceLength = source.length;
   }
 
   *tokenize(): Generator<Token, void, undefined> {
     if (this.sourceLength === 0) {
-      yield newToken("EOF", "EOF", this.line, this.column);
+      yield createToken("EOF", "EOF", this.line, this.column);
       return;
     }
 
@@ -63,15 +59,98 @@ export class Lexer {
     this.skipLeadingWhitespace();
 
     while (this.position < this.sourceLength) {
+      const currentMode = this.mode[this.mode.length - 1];
       const char = this.source[this.position];
       // Guard against undefined
       if (!char) break;
 
+      if (currentMode === "inString") {
+        if (char === '"') {
+          this.mode.pop();
+          this.advance(); // Consume "
+          continue;
+        }
+
+        if (char === "#" && this.peekNext() === "{") {
+          const startLine = this.line;
+          const startColumn = this.column;
+          this.advance(); // #
+          this.advance(); // {
+          yield createToken(
+            "INTERPOLATION_START",
+            "#{ ",
+            startLine,
+            startColumn,
+          );
+          this.mode.push("default");
+          continue;
+        }
+
+        // It's string content. Read until the next " or #{
+        const startLine = this.line;
+        const startColumn = this.column;
+        let content = "";
+        while (
+          this.peek() &&
+          this.peek() !== '"' &&
+          !(this.peek() === "#" && this.peekNext() === "{")
+        ) {
+          if (this.peek() === "\\" && this.peekNext()) {
+            this.advance(); // consume '\'
+            const next = this.peek()!;
+            switch (next) {
+              case "n":
+                content += "\n";
+                break;
+              case "t":
+                content += "\t";
+                break;
+              case "\\":
+                content += "\\";
+                break;
+              case '"':
+                content += '"';
+                break;
+              default:
+                content += "\\" + next; // Keep unrecognized escapes
+            }
+            this.advance();
+          } else if (this.isNewline(this.peek()!)) {
+            const newlineChar = this.peek()!;
+            content += newlineChar;
+            this.advance();
+            if (newlineChar === "\r" && this.peek() === "\n") {
+              content += "\n";
+              this.advance();
+            }
+            this.line++;
+            this.column = 1;
+          } else {
+            content += this.peek()!;
+            this.advance();
+          }
+        }
+        if (content) {
+          yield createToken("STRING", content, startLine, startColumn);
+        }
+        continue;
+      }
+
+      // currentMode === 'default'
+      if (this.mode.length > 1 && char === "}") {
+        // Check we are in an interpolation
+        this.mode.pop();
+        const startLine = this.line;
+        const startColumn = this.column;
+        this.advance();
+        yield createToken("INTERPOLATION_END", "}", startLine, startColumn);
+        continue;
+      }
+
       switch (true) {
         case this.isNewline(char):
-          yield newToken("NEWLINE", "\n", this.line, this.column);
+          yield createToken("NEWLINE", "\n", this.line, this.column);
           this.advance(); // Consume the current newline character ('\n' or '\r')
-          // If it was a carriage return, check if it's followed by a line feed (\r\n)
           if (char === "\r" && this.peek() === "\n") {
             this.advance(); // Consume the line feed as part of the same newline
           }
@@ -93,7 +172,8 @@ export class Lexer {
           break;
 
         case char === '"':
-          yield* this.handleString();
+          this.mode.push("inString");
+          this.advance(); // Consume "
           break;
 
         case this.isDigit(char):
@@ -113,25 +193,27 @@ export class Lexer {
       }
     }
 
+    if (this.mode.length > 1) {
+      this.error(`Unterminated string or interpolation block at end of file.`);
+    }
+
     // Close indentation stack
     while (this.indentStack.length > 1) {
       const previousIndent = this.indentStack.pop()!;
-      yield newToken("DEDENT", previousIndent, this.line, this.column);
+      yield createToken("DEDENT", previousIndent, this.line, this.column);
     }
 
-    yield newToken("EOF", "EOF", this.line, this.column);
+    yield createToken("EOF", "EOF", this.line, this.column);
   }
 
   private skipLeadingWhitespace() {
     while (this.position < this.sourceLength) {
       const char = this.peek();
 
-      // Guard against undefined
       if (!char) break;
 
       if (this.isWhitespace(char) || this.isNewline(char)) {
         if (this.isNewline(char)) {
-          // Handle \r\n
           if (char === "\r" && this.peekNext() === "\n") {
             this.advance();
           }
@@ -163,7 +245,6 @@ export class Lexer {
       this.error("Mixed indentation (spaces + tabs) detected");
     }
 
-    // Validate consistent indentation character
     const currentChar = spaces > 0 ? " " : tabs > 0 ? "\t" : null;
     if (this.indentChar === null && currentChar !== null) {
       this.indentChar = currentChar;
@@ -174,17 +255,16 @@ export class Lexer {
     const currentIndent = this.indentStack[this.indentStack.length - 1] ?? 0;
     if (indentLevel > currentIndent) {
       this.indentStack.push(indentLevel);
-      yield newToken("INDENT", indentLevel, startLine, startColumn);
+      yield createToken("INDENT", indentLevel, startLine, startColumn);
     } else if (indentLevel < currentIndent) {
       while (
         this.indentStack.length > 1 &&
         (this.indentStack[this.indentStack.length - 1] as number) > indentLevel
       ) {
         const previousIndent = this.indentStack.pop()!;
-        yield newToken("DEDENT", previousIndent, startLine, startColumn);
+        yield createToken("DEDENT", previousIndent, startLine, startColumn);
       }
 
-      // Validate that we landed on a valid indentation level
       if (this.indentStack[this.indentStack.length - 1] !== indentLevel) {
         this.error("Invalid dedentation level");
       }
@@ -193,82 +273,18 @@ export class Lexer {
     this.atLineStart = false;
   }
 
-  private *handleString(): Generator<Token, void, undefined> {
-    const startLine = this.line;
-    const startColumn = this.column;
-    this.advance(); // skip opening quote
-
-    let str = "";
-    while (this.position < this.sourceLength) {
-      const char = this.peek();
-      // Guard against undefined
-      if (!char) break;
-
-      if (char === '"') {
-        this.advance(); // skip closing quote
-        yield newToken("STRING", str, startLine, startColumn);
-        return;
-      }
-
-      // If we see a newline, increment the line count and reset the column.
-      if (this.isNewline(char)) {
-        str += char;
-        if (char === "\r" && this.peekNext() === "\n") {
-          str += "\n";
-          this.advance();
-        }
-        this.advance();
-        this.line++;
-        this.column = 1;
-        continue; // Continue to the next character
-      }
-
-      // Handle escape sequences
-      if (char === "\\" && this.peekNext()) {
-        const next = this.peekNext()!;
-        switch (next) {
-          case "n":
-            str += "\n";
-            this.advance();
-            break;
-          case "t":
-            str += "\t";
-            this.advance();
-            break;
-          case "\\":
-            str += "\\";
-            this.advance();
-            break;
-          case '"':
-            str += '"';
-            this.advance();
-            break;
-          default:
-            str += char;
-        }
-      } else {
-        str += char;
-      }
-
-      this.advance();
-    }
-
-    this.error("Unterminated string literal");
-  }
-
   private *handleNumber(): Generator<Token, void, undefined> {
     const startLine = this.line;
     const startColumn = this.column;
     let numStr = this.readUntil((c) => !this.isDigit(c));
 
-    // Check for a fractional part
     if (this.peek() === "." && this.isDigit(this.peekNext() ?? "")) {
-      this.advance(); // Consume '.'
+      this.advance();
       numStr += ".";
       numStr += this.readUntil((c) => !this.isDigit(c));
     }
 
-    yield newToken("NUMBER", Number(numStr), startLine, startColumn);
+    yield createToken("NUMBER", Number(numStr), startLine, startColumn);
   }
 
   private *handleOperatorOrSymbol(): Generator<Token, void, undefined> {
@@ -277,9 +293,8 @@ export class Lexer {
     let symbol = this.peek();
     if (!symbol) return;
 
-    this.advance(); // Consume first char of potential operator
+    this.advance();
 
-    // Check for two-character operators
     const nextChar = this.peek();
     if (nextChar && operators.has(symbol + nextChar)) {
       symbol += nextChar;
@@ -291,7 +306,7 @@ export class Lexer {
       this.error(`Unknown operator or symbol: ${symbol}`);
     }
 
-    yield newToken(type, symbol, startLine, startColumn);
+    yield createToken(type, symbol, startLine, startColumn);
   }
 
   private *handleIdentifier(): Generator<Token, void, undefined> {
@@ -305,7 +320,7 @@ export class Lexer {
         ? (ident.toUpperCase() as TokenType)
         : "IDENTIFIER";
 
-    yield newToken(type, ident, startLine, startColumn);
+    yield createToken(type, ident, startLine, startColumn);
   }
 
   private error(message: string): never {

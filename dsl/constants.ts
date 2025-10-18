@@ -7,7 +7,6 @@ export const keywords = new Set([
   "goto",
   "if",
   "end",
-  "random",
 ] as const);
 
 export const symbols = new Map<string, TokenType>([
