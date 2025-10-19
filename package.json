@@ -10,9 +10,12 @@
     "start": "node --import=tsx index.ts",
     "dev": "node --watch --import=tsx index.ts",
     "test": "tsx --test",
-    "test:watch": "tsx --test --watch"
+    "test:watch": "tsx --test --watch",
+    "cli": "node --import=tsx ./cli/index.ts",
+    "cli:watch": "node --import=tsx ./cli/index.ts --watch"
   },
   "dependencies": {
+    "cleye": "^1.3.4",
     "typescript": "^5.9.3"
   },
   "devDependencies": {

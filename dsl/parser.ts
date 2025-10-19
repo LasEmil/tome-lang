@@ -13,7 +13,7 @@ import type {
   TokenType,
 } from "./types.ts";
 
-class ParserError extends Error {
+export class ParserError extends Error {
   constructor(
     message: string,
     public line: number,
@@ -35,9 +35,17 @@ class ParserError extends Error {
   }
 }
 
+export class AggregateParserError extends Error {
+  constructor(public errors: ParserError[]) {
+    super(`Found ${errors.length} parse error${errors.length > 1 ? "s" : ""}`);
+    this.name = "AggregateParserError";
+  }
+}
+
 export interface ParseResult {
-  ast: AST | null;
+  value: AST | null;
   errors: ParserError[];
+  valid: boolean;
 }
 
 export class Parser {
@@ -48,7 +56,7 @@ export class Parser {
   private sourceLines: string[];
   private errors: ParserError[] = [];
 
-  constructor(lexerGenerator: Generator<Token>, source?: string) {
+  constructor(lexerGenerator: ArrayIterator<Token>, source?: string) {
     this.lexer = lexerGenerator;
     this.sourceLines = source ? source.split("\n") : [];
 
@@ -87,9 +95,11 @@ export class Parser {
       }
     }
 
+    const valid = this.errors.length === 0;
     return {
-      ast: this.errors.length === 0 ? { type: "Program", nodes } : null,
+      value: valid ? { type: "Program", nodes } : null,
       errors: this.errors,
+      valid,
     };
   }
 
@@ -547,8 +557,6 @@ export class Parser {
 
     this.consume("RIGHT_PAREN", "Expected ')' after function arguments");
 
-    // <<< FIX: REMOVED VALIDATION LOGIC FROM HERE >>>
-
     return {
       type: "FunctionCall",
       name: name.value as string,
@@ -568,7 +576,6 @@ export class Parser {
     const token = this.peek();
     let message = errorMessage;
 
-    // Add helpful suggestions for common mistakes
     if (expectedType === "COLON" && token.type === "IDENTIFIER") {
       message += ". Did you forget ':' before the node name?";
     }
@@ -611,7 +618,6 @@ export class Parser {
     return prev;
   }
 
-  // Helper to get the token that was just consumed by match() or advance()
   private getPreviousToken(): Token {
     if (!this.previousToken) {
       throw new Error("No previous token available");

@@ -8,7 +8,8 @@ import type { AnalysisResult } from "./types.ts";
 describe("DSL Analyzer", () => {
   const prepareAnalysis = (source: string): AnalysisResult => {
     const lexer = new Lexer(source);
-    const parser = new Parser(lexer.tokenize(), source);
+    const lexResult = lexer.lex();
+    const parser = new Parser(lexResult.value.values(), source);
 
     const analyzer = new Analyzer();
     for (const node of parser.parseNodesStreaming()) {

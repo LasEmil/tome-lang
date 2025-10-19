@@ -217,14 +217,16 @@ export interface AnalysisResult {
 }
 
 export interface Reference {
-  target: string; // The node being referenced (e.g., "shop")
-  line: number; // Where the reference appears
-  column: number; // Column position
-  type: "choice" | "goto"; // How it's referenced
-  sourceNode: string; // Which node contains this reference
+  target: string;
+  line: number;
+  column: number;
+  type: "choice" | "goto";
+  sourceNode: string;
 }
 
-// Helper type for all diagnostics
 export type Diagnostic = AnalysisError | AnalysisWarning | AnalysisSuggestion;
 
 export type InferredType = "number" | "string" | "boolean" | "any";
+
+export const SeverityLevels = ["error", "warning", "info"] as const;
+export type SeverityLevel = (typeof SeverityLevels)[number];

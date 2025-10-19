@@ -2,7 +2,7 @@ import { Lexer } from "./dsl/lexer.ts";
 import { Parser } from "./dsl/parser.ts";
 import { testProgram as source } from "./data/testProgram.ts";
 import { Analyzer } from "./dsl/analyzer.ts";
-import { writeFileSync } from "node:fs";
+// import { writeFileSync } from "node:fs";
 
 // Option 1: Parse everything (returns AST)
 // const lexer = new Lexer(source);
@@ -20,7 +20,8 @@ import { writeFileSync } from "node:fs";
 
 // Option 2: Stream nodes one at a time (memory efficient)
 const lexer = new Lexer(source);
-const parser = new Parser(lexer.tokenize(), source);
+const lexResult = lexer.lex();
+const parser = new Parser(lexResult.value.values(), source);
 const analyzer = new Analyzer();
 for (const node of parser.parseNodesStreaming()) {
   console.log(`Analyzing node: ${node.id}`);

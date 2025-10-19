@@ -11,15 +11,22 @@ for (const op of operators.keys()) {
   operatorStartChars.add(op[0]!);
 }
 
-class LexerError extends Error {
+export class LexerError extends Error {
   constructor(
     message: string,
     public line: number,
     public column: number,
     public source?: string,
   ) {
-    super(`${message} at line ${line}, column ${column}`);
+    super(message);
     this.name = "LexerError";
+  }
+}
+
+export class AggregateLexerError extends Error {
+  constructor(public errors: LexerError[]) {
+    super(`Found ${errors.length} lexer error${errors.length > 1 ? "s" : ""}`);
+    this.name = "AggregateLexerError";
   }
 }
 
@@ -30,6 +37,12 @@ function createToken(
   column: number,
 ): Token {
   return { type, value, line, column };
+}
+
+export interface LexResult {
+  value: Token[];
+  errors: LexerError[];
+  valid: boolean;
 }
 
 export class Lexer {
@@ -44,9 +57,33 @@ export class Lexer {
   atLineStart: boolean = true;
 
   private mode: ("default" | "inString")[] = ["default"];
+  private errors: LexerError[] = [];
 
   constructor(public source: string) {
     this.sourceLength = source.length;
+  }
+
+  public lex(): LexResult {
+    const tokens: Token[] = [];
+
+    try {
+      for (const token of this.tokenize()) {
+        tokens.push(token);
+      }
+    } catch (e) {
+      if (e instanceof LexerError) {
+        this.errors.push(e);
+      } else {
+        throw e;
+      }
+    }
+
+    const valid = this.errors.length === 0;
+    return {
+      value: tokens,
+      errors: this.errors,
+      valid,
+    };
   }
 
   *tokenize(): Generator<Token, void, undefined> {
