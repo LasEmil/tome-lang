@@ -22,6 +22,9 @@ node shop
   choice "Leave", :start
 end
 
+node empty 
+end
+
 node buy_potion
   @gold -= 50
   @health += 30

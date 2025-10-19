@@ -129,38 +129,44 @@ export class Parser {
     this.consume("NODE", "Expected 'node' keyword at the beginning of a node");
     const nodeName = this.consume("IDENTIFIER", "Expected node identifier");
     this.consume("NEWLINE", "Expected newline after node declaration");
-    this.consume("INDENT", "Expected indentation after node declaration");
 
     const statements: Statement[] = [];
 
-    while (!this.expect("DEDENT") && !this.expect("END")) {
-      this.skipNewlines();
+    // If we find an indented block, parse its contents.
+    if (this.match(["INDENT"])) {
+      while (!this.expect("DEDENT") && !this.expect("END")) {
+        this.skipNewlines();
 
-      if (this.expect("DEDENT") || this.expect("END")) {
-        break;
-      }
+        if (this.expect("DEDENT") || this.expect("END")) {
+          break;
+        }
 
-      try {
-        statements.push(this.parseStatement());
-      } catch (e) {
-        if (e instanceof ParserError) {
-          this.errors.push(e);
-          // Skip to next statement (next line)
-          while (!this.isAtEnd() && this.peek().type !== "NEWLINE") {
-            this.advance();
+        try {
+          statements.push(this.parseStatement());
+        } catch (e) {
+          if (e instanceof ParserError) {
+            this.errors.push(e);
+            // Skip to next statement (next line)
+            while (!this.isAtEnd() && this.peek().type !== "NEWLINE") {
+              this.advance();
+            }
+            if (this.peek().type === "NEWLINE") {
+              this.advance();
+            }
+          } else {
+            throw e;
           }
-          if (this.peek().type === "NEWLINE") {
-            this.advance();
-          }
-        } else {
-          throw e;
         }
       }
-    }
 
-    if (this.peek().type === "DEDENT") {
-      this.advance();
+      // A DEDENT should follow the statements.
+      if (this.peek().type === "DEDENT") {
+        this.advance();
+      }
     }
+    // If there was no INDENT, we just skip to consuming END,
+    // correctly creating a node with an empty statements array.
+
     this.consume("END", "Expected 'end' keyword to close node");
 
     return {
@@ -467,9 +473,17 @@ export class Parser {
   private parsePrimary(): Expression {
     if (this.match(["TRUE", "FALSE", "NUMBER", "STRING"])) {
       const token = this.getPreviousToken();
+      let value: string | number | boolean = token.value;
+
+      if (token.type === "TRUE") {
+        value = true;
+      } else if (token.type === "FALSE") {
+        value = false;
+      }
+
       return {
         type: "Literal",
-        value: token.value,
+        value: value,
       };
     }
 
@@ -484,7 +498,6 @@ export class Parser {
       };
     }
 
-    // Check for function call BEFORE consuming the identifier
     if (
       this.peek().type === "IDENTIFIER" &&
       this.peekNext()?.type === "LEFT_PAREN"
@@ -534,13 +547,7 @@ export class Parser {
 
     this.consume("RIGHT_PAREN", "Expected ')' after function arguments");
 
-    // Validate known functions
-    if (name.value === "random" && args.length !== 2) {
-      this.error(
-        `Function 'random' expects exactly 2 arguments (min, max), but got ${args.length}`,
-        name,
-      );
-    }
+    // <<< FIX: REMOVED VALIDATION LOGIC FROM HERE >>>
 
     return {
       type: "FunctionCall",

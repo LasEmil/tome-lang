@@ -13,7 +13,7 @@ describe("DSL Parser", () => {
     const result = parser.parse();
     const ast = result.ast!;
     assert.strictEqual(ast.type, "Program");
-    assert.strictEqual(ast.nodes.length, 11); // 11 nodes defined
+    assert.strictEqual(ast.nodes.length, 12); // 11 nodes defined
 
     assert.deepStrictEqual(ast, expectedAST);
   });

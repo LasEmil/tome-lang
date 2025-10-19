@@ -161,3 +161,70 @@ export interface FunctionCallExpression {
   name: string;
   args: Expression[];
 }
+
+export type AnalysisErrorType =
+  | "missing_node"
+  | "duplicate_node"
+  | "invalid_function"
+  | "invalid_function_args"
+  | "missing_entry_point"
+  | "empty_node"
+  | "invalid_expression";
+
+export type AnalysisWarningType =
+  | "unreachable_node"
+  | "dead_end"
+  | "undefined_variable"
+  | "unused_variable"
+  | "circular_reference"
+  | "type_mismatch"
+  | "suspicious_condition"
+  | "identical_choice";
+
+export interface AnalysisError {
+  type: AnalysisErrorType;
+  message: string;
+  line: number;
+  column: number;
+  node?: string; // Which node the error is in
+  severity: "error";
+}
+
+export interface AnalysisWarning {
+  type: AnalysisWarningType;
+  message: string;
+  line: number;
+  column: number;
+  node?: string; // Which node the warning is in
+  severity: "warning";
+}
+
+export interface AnalysisSuggestion {
+  type: string;
+  message: string;
+  line: number;
+  column: number;
+  node?: string;
+  severity: "info";
+  fix?: string; // Optional auto-fix suggestion
+}
+
+export interface AnalysisResult {
+  valid: boolean; // true if no errors (warnings are OK)
+  errors: AnalysisError[];
+  warnings: AnalysisWarning[];
+  suggestions?: AnalysisSuggestion[];
+}
+
+export interface Reference {
+  target: string; // The node being referenced (e.g., "shop")
+  line: number; // Where the reference appears
+  column: number; // Column position
+  type: "choice" | "goto"; // How it's referenced
+  sourceNode: string; // Which node contains this reference
+}
+
+// Helper type for all diagnostics
+export type Diagnostic = AnalysisError | AnalysisWarning | AnalysisSuggestion;
+
+export type InferredType = "number" | "string" | "boolean" | "any";
