@@ -3,13 +3,10 @@ import { command } from "cleye";
 export const compileCommand = command(
   {
     name: "compile",
-
     help: {
       description: "Transform a .tome script into machine-readable format",
     },
-
     parameters: ["<file>"],
-
     flags: {
       output: {
         type: String,
@@ -19,7 +16,7 @@ export const compileCommand = command(
       format: {
         type: String,
         alias: "f",
-        description: "Output format: json (default), xstate, csv, or dot",
+        description: "Output format: json (default), state machine or csv",
         default: "json",
       },
       pretty: {
@@ -28,20 +25,15 @@ export const compileCommand = command(
         description: "Format JSON output with indentation",
         default: false,
       },
-      tokens: {
-        type: Boolean,
-        description: "Debug flag: Output lexer token stream",
-        default: false,
-      },
     },
   },
   (argv) => {
     const file = argv._.file as string;
-    const { output, format, pretty, tokens } = argv.flags;
+    const { output, format, pretty } = argv.flags;
 
     // TODO: Implement compile command
     console.log("Compile command called");
     console.log("File:", file);
-    console.log("Flags:", { output, format, pretty, tokens });
+    console.log("Flags:", { output, format, pretty });
   },
 );

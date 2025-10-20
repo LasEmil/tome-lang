@@ -1,18 +1,19 @@
 import { command } from "cleye";
-import { promises } from "node:fs";
 import { AggregateLexerError, Lexer } from "../../dsl/lexer.ts";
 import { AggregateParserError, Parser } from "../../dsl/parser.ts";
 import { Analyzer } from "../../dsl/analyzer.ts";
 import { SeverityLevels, type SeverityLevel } from "../../dsl/types.ts";
 import { createStyler, prettyPrintAnalysisResults } from "../format.ts";
+import fs from "node:fs/promises";
 
-function readEntireFile(filePath: string): Promise<string | Buffer> {
-  return promises
-    .open(filePath, "r")
-    .then((fileHandle) => fileHandle.readFile());
+async function readEntireFile(filePath: string) {
+  const fileHandle = await fs.open(filePath, "r");
+  const buffer = await fileHandle.readFile({ encoding: "utf-8" });
+
+  return { buffer, close: () => fileHandle.close() };
 }
 
-function Severity(level: SeverityLevel) {
+function Severity(level: SeverityLevel): SeverityLevel {
   if (!SeverityLevels.includes(level)) {
     throw new Error(`Invalid level: "${level}"`);
   }
@@ -26,23 +27,66 @@ export async function check(
 ) {
   const { format, level, noColor } = flags;
   const style = createStyler(noColor);
+  let closeFile;
 
   for (const filePath of files) {
     try {
-      const buffer = await readEntireFile(filePath);
+      const { buffer, close } = await readEntireFile(filePath);
+      closeFile = close;
+
       const fileContent = buffer.toString();
 
       const lexer = new Lexer(fileContent);
       const lexResult = lexer.lex();
 
       if (!lexResult.valid) {
-        throw new AggregateLexerError(lexResult.errors);
+        switch (format) {
+          case "text":
+            throw new AggregateLexerError(lexResult.errors);
+          case "json":
+            console.log(
+              JSON.stringify(
+                {
+                  type: "lexical_errors",
+                  file: filePath,
+                  errors: lexResult.errors.map((err) => ({
+                    line: err.line,
+                    column: err.column,
+                    message: err.message,
+                  })),
+                },
+                null,
+                2,
+              ),
+            );
+        }
+        return;
       }
       const parser = new Parser(lexResult.value.values(), fileContent);
 
       const parseResult = parser.parse();
       if (!parseResult.valid) {
-        throw new AggregateParserError(parseResult.errors);
+        switch (format) {
+          case "text":
+            throw new AggregateParserError(parseResult.errors);
+          case "json":
+            console.log(
+              JSON.stringify(
+                {
+                  type: "syntax_errors",
+                  file: filePath,
+                  errors: parseResult.errors.map((err) => ({
+                    line: err.line,
+                    column: err.column,
+                    message: err.message,
+                  })),
+                },
+                null,
+                2,
+              ),
+            );
+        }
+        return;
       }
 
       const analyzer = new Analyzer();
@@ -54,14 +98,38 @@ export async function check(
       const analysisResult = analyzer.finalizeAnalysis();
 
       if (!analysisResult.valid) {
-        prettyPrintAnalysisResults(
-          analysisResult,
-          filePath,
-          style,
-          level as SeverityLevel,
-        );
+        switch (format) {
+          case "text":
+            prettyPrintAnalysisResults(
+              analysisResult,
+              filePath,
+              style,
+              level as SeverityLevel,
+            );
+            break;
+          case "json":
+            console.log(
+              JSON.stringify(
+                {
+                  type: "analysis_issues",
+                  file: filePath,
+                  errors: analysisResult.errors,
+                  warnings: analysisResult.warnings,
+                  suggestions: analysisResult.suggestions,
+                },
+                null,
+                2,
+              ),
+            );
+            break;
+        }
       } else {
-        console.log(analysisResult);
+        console.log(
+          style(
+            "green",
+            `Analysis of ${filePath} completed successfully. No issues found.`,
+          ),
+        );
       }
     } catch (error) {
       if (
@@ -86,19 +154,20 @@ export async function check(
         console.error(`Error reading file ${filePath}:`, error);
       }
       continue;
+    } finally {
+      if (closeFile) {
+        await closeFile();
+      }
     }
   }
 }
 export const checkCommand = command(
   {
     name: "check",
-
     help: {
       description: "Analyze .tome files for errors, warnings, and suggestions",
     },
-
     parameters: ["<files...>"],
-
     flags: {
       format: {
         type: String,
@@ -124,8 +193,5 @@ export const checkCommand = command(
     const files = argv._.files as string[];
     const { format, level, noColor } = argv.flags;
     await check(files, { format, level, noColor });
-
-    console.log("Files:", files);
-    console.log("Flags:", { format, level, noColor });
   },
 );

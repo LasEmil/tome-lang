@@ -79,7 +79,6 @@ node victory
 end
 
 node defeat
-  say 
   @health = 100
   @gold = @gold / 2
   
@@ -120,6 +119,5 @@ node ending
   say "Thanks for playing!"
   say "Final stats:"
   say "Gold: #{@gold}, Level: #{@level}"
-  "Sayyy
 end
 
