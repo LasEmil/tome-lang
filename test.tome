@@ -21,14 +21,11 @@ node shop
   choice "Leave", :start
 end
 
-node empty 
-end
 
 node buy_potion
   @gold -= 50
   @health += 30
   @potions = @potions + 1
-  
   say "You bought a potion!"
   say "Health restored to #{@health}."
   
@@ -115,9 +112,14 @@ node inventory
   choice "Back", :start
 end
 
+
+
+
 node ending
   say "Thanks for playing!"
   say "Final stats:"
   say "Gold: #{@gold}, Level: #{@level}"
 end
+
+
 

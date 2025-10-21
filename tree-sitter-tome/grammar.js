@@ -22,8 +22,7 @@ export default grammar({
   ],
 
   rules: {
-    source_file: ($) =>
-      seq(repeat($._newline), sepBy(repeat1($._newline), $.node_definition)),
+    source_file: ($) => repeat($.node_definition),
 
     node_definition: ($) =>
       seq(
