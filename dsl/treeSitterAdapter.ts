@@ -11,6 +11,7 @@ import type {
   SayStatement,
   Statement,
 } from "./types.ts";
+import { treeSitterNodeTypes } from "./constants.ts";
 
 interface Tree {
   rootNode: SyntaxNode;
@@ -85,13 +86,8 @@ export class TreeSitterAdapter {
             throw e;
           }
         }
-      } else if (child.type === "ERROR") {
-        this.addError(
-          "Syntax error in source file",
-          child.startPosition.row + 1,
-          child.startPosition.column + 1,
-        );
       }
+      // Note: ERROR nodes are already handled by collectTreeSitterErrors
     }
 
     const valid = this.errors.length === 0;
@@ -104,18 +100,34 @@ export class TreeSitterAdapter {
   }
 
   private collectTreeSitterErrors(node: SyntaxNode): void {
-    if (node.type === "ERROR" || node.isMissing) {
-      const errorMessage = node.isMissing
-        ? `Missing ${node.type}`
-        : `Syntax error: unexpected '${node.text}'`;
+    if (node.type === "ERROR") {
+      // Truncate error text to first line and limit length
+      const firstLine = node.text.split("\n")[0].trim();
+      const truncatedText = firstLine.length > 30
+        ? firstLine.slice(0, 30) + "..."
+        : firstLine;
+
+      const errorMessage = truncatedText
+        ? `Syntax error: unexpected '${truncatedText}'`
+        : "Syntax error";
 
       this.addError(
         errorMessage,
         node.startPosition.row + 1,
         node.startPosition.column + 1,
       );
+      return; // Don't recurse into ERROR node children
     }
 
+    if (node.isMissing) {
+      this.addError(
+        `Missing ${node.type}`,
+        node.startPosition.row + 1,
+        node.startPosition.column + 1,
+      );
+    }
+
+    // Recurse into children
     for (const child of node.children) {
       if (child.hasError) {
         this.collectTreeSitterErrors(child);
