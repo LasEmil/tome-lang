@@ -44,6 +44,6 @@
     "rewriteRelativeImportExtensions": true,
     "erasableSyntaxOnly": false,
     "verbatimModuleSyntax": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
   }
 }
