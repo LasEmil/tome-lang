@@ -1,175 +1,170 @@
-# CodeMirror Tree-sitter Adapter
+# CodeMirror 6 + Tree-sitter Adapter
 
-A general-purpose adapter for integrating any tree-sitter grammar with CodeMirror for syntax highlighting and incremental parsing.
+A general-purpose adapter for integrating any tree-sitter grammar with CodeMirror 6 for syntax highlighting and incremental parsing.
 
 ## Features
 
 - ✅ **Incremental parsing** - Only re-parses changed sections
 - ✅ **Syntax highlighting** - Uses tree-sitter queries for accurate highlighting
 - ✅ **Grammar-agnostic** - Works with any `.wasm` tree-sitter grammar
-- ✅ **Debounced updates** - Configurable debouncing for performance
+- ✅ **Modern architecture** - Built on CodeMirror 6's extension system
+- ✅ **Viewport-aware** - Only highlights visible lines for performance
 - ✅ **Flexible styling** - Supports inline styles or CSS classes
 - ✅ **Parse callbacks** - Hook into parse events for custom behavior
 
 ## Installation
 
 ```bash
-# Install dependencies
-npm install codemirror web-tree-sitter
-```
-
-Include the tree-sitter runtime in your HTML:
-
-```html
-<script src="tree-sitter.js"></script>
+npm install codemirror @codemirror/state @codemirror/view web-tree-sitter
 ```
 
 ## Basic Usage
 
 ```typescript
-import { CodeMirrorTreeSitterAdapter } from './editor/codemirrorTSAdapter';
+import { EditorView, basicSetup } from "codemirror";
+import { EditorState } from "@codemirror/state";
+import { treeSitter, createTreeSitterParser } from './editor/codemirrorTSAdapter';
 
-// Create CodeMirror instance
-const editor = CodeMirror.fromTextArea(textareaElement, {
-  lineNumbers: true,
-  showCursorWhenSelecting: true,
-});
-
-// Create adapter with your grammar
-const adapter = new CodeMirrorTreeSitterAdapter(
-  editor,
-  {
-    grammarPath: 'tree-sitter-mylang.wasm',
-    highlightQuery: `
-      (keyword) @keyword
-      (string) @string
-      (number) @number
-      (comment) @comment
-    `,
-    colorMap: {
-      keyword: '#C586C0',
-      string: '#CE9178',
-      number: '#B5CEA8',
-      comment: '#6A9955',
-    },
-  }
+// Create parser
+const parser = await createTreeSitterParser(
+  window.TreeSitter,
+  'tree-sitter-mylang.wasm'
 );
 
-// Initialize
-await adapter.initialize(window.TreeSitter);
+// Create editor with tree-sitter extension
+const view = new EditorView({
+  state: EditorState.create({
+    doc: 'your code here',
+    extensions: [
+      basicSetup,
+      treeSitter({
+        parser,
+        highlightQuery: `
+          (keyword) @keyword
+          (string) @string
+          (number) @number
+          (comment) @comment
+        `,
+        colorMap: {
+          keyword: '#C586C0',
+          string: '#CE9178',
+          number: '#B5CEA8',
+          comment: '#6A9955',
+        },
+      }),
+    ],
+  }),
+  parent: document.getElementById('editor'),
+});
 ```
 
 ## API Reference
 
-### `CodeMirrorTreeSitterAdapter`
+### Functions
 
-#### Constructor
+#### `treeSitter(config: TreeSitterConfig): Extension`
 
-```typescript
-constructor(
-  editor: CodeMirror.Editor,
-  config: TreeSitterConfig,
-  highlightConfig?: TreeSitterHighlightConfig
-)
-```
+Creates a CodeMirror 6 extension for tree-sitter integration.
 
 **TreeSitterConfig:**
-- `grammarPath: string` - Path to `.wasm` grammar file
-- `highlightQuery: string` - Tree-sitter query for syntax highlighting
-- `colorMap?: Record<string, string>` - Custom colors for capture names
-- `parseDebounceMs?: number` - Parse debounce delay (default: 50ms)
-- `highlightDebounceMs?: number` - Highlight debounce delay (default: 50ms)
-
-**TreeSitterHighlightConfig:**
-- `colors?: string[]` - Custom color palette (default: built-in colors)
-- `useCssClasses?: boolean` - Use CSS classes instead of inline styles (default: false)
-- `cssPrefix?: string` - CSS class prefix (default: 'ts-')
-
-#### Methods
-
-**`async initialize(TreeSitter: any): Promise<void>`**
-
-Initialize tree-sitter and set up the parser.
-
-**`onParse(callback: (tree: Tree, duration: number) => void): void`**
-
-Register a callback to be invoked after each parse.
-
 ```typescript
-adapter.onParse((tree, duration) => {
-  console.log(`Parsed in ${duration.toFixed(1)}ms`);
-  if (tree.rootNode.hasError) {
-    console.warn('Parse errors detected');
-  }
-});
+{
+  parser: Parser;              // Tree-sitter parser instance
+  highlightQuery: string;      // Tree-sitter highlight query
+  colorMap?: Record<string, string>;  // Custom colors for captures
+  useCssClasses?: boolean;     // Use CSS classes (default: false)
+  cssPrefix?: string;          // CSS class prefix (default: 'ts-')
+  onParse?: (tree, duration) => void;  // Parse callback
+}
 ```
 
-**`getTree(): Tree | null`**
+#### `createTreeSitterParser(TreeSitter: any, grammarPath: string): Promise<Parser>`
 
-Get the current parse tree.
+Helper to create and initialize a tree-sitter parser.
 
-**`getParser(): Parser | null`**
+```typescript
+const parser = await createTreeSitterParser(
+  window.TreeSitter,
+  'path/to/grammar.wasm'
+);
+```
 
-Get the tree-sitter parser instance.
+#### `getTree(view: EditorView): Parser.Tree | null`
 
-**`async reparse(): Promise<void>`**
+Get the current parse tree from an editor instance.
 
-Manually trigger a re-parse.
-
-**`rehighlight(): void`**
-
-Manually trigger re-highlighting.
-
-**`dispose(): void`**
-
-Clean up resources and remove event listeners.
+```typescript
+const tree = getTree(view);
+if (tree && tree.rootNode.hasError) {
+  console.log('Parse errors detected');
+}
+```
 
 ## Examples
 
-### Example 1: Using with Tome Language
+### Example 1: Complete Tome Editor
 
 ```typescript
-import { CodeMirrorTreeSitterAdapter } from './editor/codemirrorTSAdapter';
+import { EditorView, basicSetup } from "codemirror";
+import { EditorState } from "@codemirror/state";
+import { treeSitter, createTreeSitterParser } from './codemirrorTSAdapter';
 
-const tomeQuery = `
-  ["node" "say" "choice" "goto"] @keyword
-  (number_literal) @number
-  (string_literal) @string
-  (variable) @variable
-  (comment) @comment
-`;
+async function createTomeEditor(parent: HTMLElement) {
+  const parser = await createTreeSitterParser(
+    window.TreeSitter,
+    'tree-sitter-tome.wasm'
+  );
 
-const adapter = new CodeMirrorTreeSitterAdapter(editor, {
-  grammarPath: 'tree-sitter-tome.wasm',
-  highlightQuery: tomeQuery,
-  colorMap: {
-    keyword: '#C586C0',
-    number: '#B5CEA8',
-    string: '#CE9178',
-    variable: '#9CDCFE',
-    comment: '#6A9955',
-  },
-});
+  const view = new EditorView({
+    state: EditorState.create({
+      extensions: [
+        basicSetup,
+        treeSitter({
+          parser,
+          highlightQuery: `
+            ["node" "say" "choice" "goto"] @keyword
+            (number_literal) @number
+            (string_literal) @string
+            (variable) @variable
+            (comment) @comment
+          `,
+          colorMap: {
+            keyword: '#C586C0',
+            number: '#B5CEA8',
+            string: '#CE9178',
+            variable: '#9CDCFE',
+            comment: '#6A9955',
+          },
+          onParse: (tree, duration) => {
+            console.log(`Parsed in ${duration.toFixed(1)}ms`);
+          },
+        }),
+      ],
+    }),
+    parent,
+  });
 
-await adapter.initialize(window.TreeSitter);
+  return view;
+}
 ```
 
 ### Example 2: Using CSS Classes
 
 ```typescript
-const adapter = new CodeMirrorTreeSitterAdapter(
-  editor,
-  {
-    grammarPath: 'tree-sitter-python.wasm',
-    highlightQuery: pythonQuery,
-  },
-  {
-    useCssClasses: true,
-    cssPrefix: 'py-',
-  }
-);
-
-await adapter.initialize(window.TreeSitter);
+const view = new EditorView({
+  state: EditorState.create({
+    extensions: [
+      basicSetup,
+      treeSitter({
+        parser,
+        highlightQuery: pythonQuery,
+        useCssClasses: true,
+        cssPrefix: 'py-',
+      }),
+    ],
+  }),
+  parent,
+});
 ```
 
 Then in your CSS:
@@ -185,25 +180,57 @@ Then in your CSS:
 
 ```typescript
 let parseCount = 0;
-const statusElement = document.getElementById('status');
+const statusEl = document.getElementById('status');
 
-adapter.onParse((tree, duration) => {
-  parseCount++;
-  statusElement.textContent =
-    `Parse #${parseCount} completed in ${duration.toFixed(1)}ms`;
+treeSitter({
+  parser,
+  highlightQuery,
+  onParse: (tree, duration) => {
+    parseCount++;
+    statusEl.textContent = `Parse #${parseCount}: ${duration.toFixed(1)}ms`;
 
-  // Check for errors
-  if (tree.rootNode.hasError) {
-    statusElement.style.color = 'red';
-  } else {
-    statusElement.style.color = 'green';
+    if (tree.rootNode.hasError) {
+      statusEl.style.color = 'red';
+    } else {
+      statusEl.style.color = 'green';
+    }
+  },
+})
+```
+
+### Example 4: Getting Diagnostics
+
+```typescript
+import { getTree } from './codemirrorTSAdapter';
+
+function getDiagnostics(view: EditorView) {
+  const tree = getTree(view);
+  if (!tree) return [];
+
+  const diagnostics = [];
+
+  function walk(node) {
+    if (node.type === 'ERROR' || node.isMissing) {
+      diagnostics.push({
+        message: node.isMissing ? `Missing ${node.type}` : 'Syntax error',
+        from: node.startIndex,
+        to: node.endIndex,
+      });
+    }
+
+    for (const child of node.children) {
+      walk(child);
+    }
   }
-});
+
+  walk(tree.rootNode);
+  return diagnostics;
+}
 ```
 
 ## Writing Highlight Queries
 
-Tree-sitter queries use a pattern-matching syntax. Here's a quick guide:
+Tree-sitter queries use a Lisp-like syntax for pattern matching:
 
 ```scheme
 ; Match specific node types
@@ -214,7 +241,7 @@ Tree-sitter queries use a pattern-matching syntax. Here's a quick guide:
 (function_call
   name: (identifier) @function)
 
-; Match multiple types
+; Match multiple alternatives
 [
   "if"
   "else"
@@ -255,25 +282,50 @@ Tree-sitter queries use a pattern-matching syntax. Here's a quick guide:
 (block_comment) @comment
 ```
 
-**Strings:**
+**Strings with interpolation:**
 ```scheme
 (string_literal) @string
 (interpolation) @embedded
 ```
 
-## Performance Tips
+## CodeMirror 6 Architecture
 
-1. **Adjust debounce delays** based on grammar complexity
-2. **Use CSS classes** for large files (avoids creating many inline style nodes)
-3. **Limit viewport highlighting** - The adapter only highlights visible lines
-4. **Monitor parse times** with the `onParse` callback
+This adapter leverages CodeMirror 6's modern architecture:
+
+- **StateField** - Stores the current parse tree in editor state
+- **ViewPlugin** - Manages parsing and decoration updates
+- **Decorations** - Applies syntax highlighting via marks
+- **Effects** - Updates state when tree changes
+- **Extensions** - Modular composition of features
+
+## Performance
+
+The adapter is optimized for performance:
+
+1. **Incremental parsing** - Tree-sitter only re-parses changed sections
+2. **Viewport-aware** - Only highlights visible lines
+3. **Debounced updates** - Highlights update on viewport changes
+4. **Efficient decorations** - Uses RangeSetBuilder for fast decoration updates
 
 ## Browser Support
 
 Requires:
 - Modern browser with WebAssembly support
-- CodeMirror 5.x or 6.x
+- ES2020+ (for optional chaining, nullish coalescing)
+- CodeMirror 6.x
 - web-tree-sitter
+
+## Migration from CodeMirror 5
+
+Key differences from CodeMirror 5:
+
+| CodeMirror 5 | CodeMirror 6 |
+|--------------|--------------|
+| `editor.markText()` | `Decoration.mark()` |
+| Options object | Extensions array |
+| Imperative API | Functional updates |
+| `editor.on('changes')` | `ViewPlugin.update()` |
+| `editor.getValue()` | `view.state.doc.toString()` |
 
 ## License
 

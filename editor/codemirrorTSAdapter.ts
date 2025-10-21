@@ -1,15 +1,29 @@
 /**
- * CodeMirror + Tree-sitter Adapter
+ * CodeMirror 6 + Tree-sitter Adapter
  *
  * A general-purpose adapter that integrates any tree-sitter grammar
- * with CodeMirror for syntax highlighting and parsing.
+ * with CodeMirror 6 for syntax highlighting and parsing.
  */
 
-import type Parser from "web-tree-sitter";
+import {
+  EditorView,
+  Decoration,
+  type DecorationSet,
+  ViewPlugin,
+  ViewUpdate,
+} from "@codemirror/view";
+import {
+  StateField,
+  StateEffect,
+  type Extension,
+  RangeSetBuilder,
+} from "@codemirror/state";
+import { Facet } from "@codemirror/state";
+import Parser from "web-tree-sitter";
 
 export interface TreeSitterConfig {
-  /** Path to the .wasm grammar file */
-  grammarPath: string;
+  /** Tree-sitter parser instance */
+  parser: Parser;
 
   /** Tree-sitter query for syntax highlighting */
   highlightQuery: string;
@@ -17,365 +31,279 @@ export interface TreeSitterConfig {
   /** Optional color map for captures (defaults to built-in colors) */
   colorMap?: Record<string, string>;
 
-  /** Debounce delay for parse updates (ms) */
-  parseDebounceMs?: number;
-
-  /** Debounce delay for highlight updates (ms) */
-  highlightDebounceMs?: number;
-}
-
-export interface TreeSitterHighlightConfig {
-  /** Custom colors for specific capture names */
-  colors?: string[];
-
   /** Whether to use CSS classes instead of inline styles */
   useCssClasses?: boolean;
 
   /** CSS class prefix when useCssClasses is true */
   cssPrefix?: string;
+
+  /** Callback invoked after each parse */
+  onParse?: (tree: Parser.Tree, duration: number) => void;
 }
 
-export class CodeMirrorTreeSitterAdapter {
-  private parser: Parser | null = null;
-  private tree: Parser.Tree | null = null;
-  private query: Parser.Query | null = null;
-  private editor: any; // CodeMirror.Editor
-  private parseCount = 0;
+// Effect to update the parse tree
+const setTreeEffect = StateEffect.define<Parser.Tree>();
 
-  private config: Required<TreeSitterConfig>;
-  private highlightConfig: TreeSitterHighlightConfig;
+// StateField to hold the current tree-sitter tree
+const treeField = StateField.define<Parser.Tree | null>({
+  create() {
+    return null;
+  },
+  update(tree, transaction) {
+    for (const effect of transaction.effects) {
+      if (effect.is(setTreeEffect)) {
+        return effect.value;
+      }
+    }
+    return tree;
+  },
+});
 
-  private parseDebounceTimer: number | null = null;
-  private highlightDebounceTimer: number | null = null;
+// Default color palette for syntax highlighting
+const DEFAULT_COLORS = [
+  "#0451a5", // blue
+  "#a31515", // red
+  "#008000", // green
+  "#af00db", // purple
+  "#001080", // dark blue
+  "#e50000", // bright red
+  "#0000ff", // pure blue
+  "#008080", // teal
+  "#a31515", // brick red
+  "#795e26", // brown
+];
 
-  private onParseCallback?: (tree: Parser.Tree, duration: number) => void;
-
-  // Default color palette for syntax highlighting
-  private static DEFAULT_COLORS = [
-    'blue',
-    'chocolate',
-    'darkblue',
-    'darkcyan',
-    'darkgreen',
-    'darkred',
-    'darkslategray',
-    'dimgray',
-    'green',
-    'indigo',
-    'navy',
-    'red',
-    'sienna',
-  ];
+/**
+ * CodeMirror 6 ViewPlugin for tree-sitter integration
+ */
+class TreeSitterViewPlugin {
+  tree: Parser.Tree | undefined = undefined;
+  decorations: DecorationSet = Decoration.none;
+  parseCount = 0;
+  private isInitializing = true;
 
   constructor(
-    editor: any,
-    config: TreeSitterConfig,
-    highlightConfig: TreeSitterHighlightConfig = {},
+    private view: EditorView,
+    private parser: Parser,
+    private query: Parser.Query,
+    private config: TreeSitterConfig,
   ) {
-    this.editor = editor;
-    this.config = {
-      grammarPath: config.grammarPath,
-      highlightQuery: config.highlightQuery,
-      colorMap: config.colorMap || {},
-      parseDebounceMs: config.parseDebounceMs ?? 50,
-      highlightDebounceMs: config.highlightDebounceMs ?? 50,
-    };
-    this.highlightConfig = {
-      colors: highlightConfig.colors || CodeMirrorTreeSitterAdapter.DEFAULT_COLORS,
-      useCssClasses: highlightConfig.useCssClasses ?? false,
-      cssPrefix: highlightConfig.cssPrefix ?? 'ts-',
-    };
+    this.parse(view);
+    this.isInitializing = false;
   }
 
-  /**
-   * Initialize tree-sitter and set up the parser with the specified grammar
-   */
-  async initialize(TreeSitter: any): Promise<void> {
-    await TreeSitter.init();
-
-    this.parser = new TreeSitter();
-    const language = await TreeSitter.Language.load(this.config.grammarPath);
-    this.parser.setLanguage(language);
-
-    // Create query from the highlight query string
-    this.query = this.parser.getLanguage().query(this.config.highlightQuery);
-
-    // Set up editor change listeners
-    this.editor.on('changes', this.handleCodeChange.bind(this));
-    this.editor.on('viewportChange', this.scheduleHighlight.bind(this));
-
-    // Initial parse
-    await this.handleCodeChange(this.editor, null);
+  update(update: ViewUpdate) {
+    if (update.docChanged || update.viewportChanged) {
+      this.parse(update.view);
+    }
   }
 
-  /**
-   * Set a callback to be invoked after each parse
-   */
-  onParse(callback: (tree: Parser.Tree, duration: number) => void): void {
-    this.onParseCallback = callback;
-  }
-
-  /**
-   * Handle code changes and incrementally update the parse tree
-   */
-  private async handleCodeChange(editor: any, changes: any[]): Promise<void> {
-    if (!this.parser) return;
-
-    const newText = this.editor.getValue() + '\n';
-    const edits = this.tree && changes ? changes.map(c => this.treeEditForEditorChange(c)) : null;
-
+  private parse(view: EditorView) {
     const start = performance.now();
+    const text = view.state.doc.toString();
 
-    // Apply incremental edits if available
-    if (edits && this.tree) {
-      for (const edit of edits) {
-        this.tree.edit(edit);
-      }
-    }
+    console.log(`[TreeSitter] Parsing document (${text.length} chars, parse #${this.parseCount + 1})`);
 
-    // Parse the updated text
-    const newTree = this.parser.parse(newText, this.tree);
-    const duration = performance.now() - start;
+    // Get the old tree for incremental parsing
+    const oldTree = this.tree;
 
-    // Clean up old tree
-    if (this.tree) {
-      this.tree.delete();
-    }
-
-    this.tree = newTree;
+    // Parse the document
+    this.tree = this.parser.parse(text, oldTree);
     this.parseCount++;
 
-    // Notify listeners
-    if (this.onParseCallback && this.tree) {
-      this.onParseCallback(this.tree, duration);
+    const duration = performance.now() - start;
+
+    console.log(`[TreeSitter] Parse completed in ${duration.toFixed(2)}ms`);
+    console.log(`[TreeSitter] Root node:`, this.tree.rootNode.toString());
+    console.log(`[TreeSitter] Has errors:`, this.tree.rootNode.hasError);
+
+    // Update decorations
+    this.decorations = this.buildDecorations(view);
+
+    // Dispatch effect to update the state field (but not during initialization)
+    if (!this.isInitializing) {
+      console.log("[TreeSitter] Dispatching tree update effect");
+      view.dispatch({
+        effects: setTreeEffect.of(this.tree),
+      });
+    } else {
+      console.log("[TreeSitter] Skipping dispatch during initialization");
     }
 
-    // Schedule highlight update
-    this.scheduleHighlight();
+    // Invoke callback if provided
+    if (this.config.onParse) {
+      this.config.onParse(this.tree, duration);
+    }
   }
 
-  /**
-   * Convert CodeMirror change to tree-sitter edit
-   */
-  private treeEditForEditorChange(change: any): Parser.Edit {
-    const oldLineCount = change.removed.length;
-    const newLineCount = change.text.length;
-    const lastLineLength = change.text[newLineCount - 1].length;
-
-    const startPosition = { row: change.from.line, column: change.from.ch };
-    const oldEndPosition = { row: change.to.line, column: change.to.ch };
-    const newEndPosition = {
-      row: startPosition.row + newLineCount - 1,
-      column: newLineCount === 1
-        ? startPosition.column + lastLineLength
-        : lastLineLength,
-    };
-
-    const startIndex = this.editor.indexFromPos(change.from);
-    let newEndIndex = startIndex + newLineCount - 1;
-    let oldEndIndex = startIndex + oldLineCount - 1;
-
-    for (let i = 0; i < newLineCount; i++) {
-      newEndIndex += change.text[i].length;
-    }
-    for (let i = 0; i < oldLineCount; i++) {
-      oldEndIndex += change.removed[i].length;
+  private buildDecorations(view: EditorView): DecorationSet {
+    if (!this.tree) {
+      console.log("[TreeSitter] No tree available for decorations");
+      return Decoration.none;
     }
 
-    return {
-      startIndex,
-      oldEndIndex,
-      newEndIndex,
-      startPosition,
-      oldEndPosition,
-      newEndPosition,
-    };
-  }
+    const builder = new RangeSetBuilder<Decoration>();
+    const { from, to } = view.viewport;
 
-  /**
-   * Schedule a highlight update with debouncing
-   */
-  private scheduleHighlight(): void {
-    if (this.highlightDebounceTimer !== null) {
-      clearTimeout(this.highlightDebounceTimer);
-    }
+    console.log(`[TreeSitter] Building decorations for viewport: ${from} to ${to}`);
 
-    this.highlightDebounceTimer = window.setTimeout(() => {
-      this.runTreeQuery();
-      this.highlightDebounceTimer = null;
-    }, this.config.highlightDebounceMs);
-  }
+    // Convert document positions to tree-sitter positions
+    const startPos = view.state.doc.lineAt(from);
+    const endPos = view.state.doc.lineAt(to);
 
-  /**
-   * Run tree-sitter query and apply syntax highlighting
-   */
-  private runTreeQuery(startRow?: number, endRow?: number): void {
-    if (!this.tree || !this.query) return;
+    console.log(`[TreeSitter] Query range: line ${startPos.number - 1} to line ${endPos.number}`);
 
-    // Get viewport if not specified
-    if (startRow === undefined || endRow === undefined) {
-      const viewport = this.editor.getViewport();
-      startRow = viewport.from;
-      endRow = viewport.to;
-    }
+    const captures = this.query.captures(
+      this.tree.rootNode,
+      { row: startPos.number - 1, column: 0 },
+      { row: endPos.number, column: 0 },
+    );
 
-    this.editor.operation(() => {
-      // Clear existing marks
-      const marks = this.editor.getAllMarks();
-      marks.forEach((m: any) => m.clear());
+    console.log(`[TreeSitter] Query returned ${captures.length} captures`);
 
-      // Apply new highlights
-      const captures = this.query!.captures(
-        this.tree!.rootNode,
-        { row: startRow!, column: 0 },
-        { row: endRow!, column: 0 },
-      );
+    let lastNodeId: number | undefined;
+    let decorationCount = 0;
+    let skippedDuplicates = 0;
+    let skippedOutOfRange = 0;
 
-      let lastNodeId: number | undefined;
-
-      for (const { name, node } of captures) {
-        // Skip duplicate captures for the same node
-        if (node.id === lastNodeId) continue;
-        lastNodeId = node.id;
-
-        const { startPosition, endPosition } = node;
-        const markOptions = this.getMarkOptions(name);
-
-        this.editor.markText(
-          { line: startPosition.row, ch: startPosition.column },
-          { line: endPosition.row, ch: endPosition.column },
-          {
-            inclusiveLeft: true,
-            inclusiveRight: true,
-            ...markOptions,
-          },
-        );
+    for (const { name, node } of captures) {
+      // Skip duplicate captures for the same node
+      if (node.id === lastNodeId) {
+        skippedDuplicates++;
+        continue;
       }
+      lastNodeId = node.id;
+
+      const startIndex = node.startIndex;
+      const endIndex = node.endIndex;
+
+      // Skip if outside viewport
+      if (endIndex < from || startIndex > to) {
+        skippedOutOfRange++;
+        continue;
+      }
+
+      // Create decoration
+      const decoration = this.createDecoration(name);
+
+      // Only log first few decorations to avoid spam
+      if (decorationCount < 5) {
+        const color = this.getColorForCapture(name);
+        const text = view.state.doc.sliceString(startIndex, endIndex);
+        console.log(`[TreeSitter] Adding decoration #${decorationCount}: ${name} [${startIndex}-${endIndex}] color:${color} text:"${text}"`);
+      }
+
+      builder.add(startIndex, endIndex, decoration);
+      decorationCount++;
+    }
+
+    console.log(`[TreeSitter] Decorations: ${decorationCount} added, ${skippedDuplicates} duplicates skipped, ${skippedOutOfRange} out of range`);
+
+    return builder.finish();
+  }
+
+  private createDecoration(captureName: string): Decoration {
+    if (this.config.useCssClasses) {
+      const className = `${this.config.cssPrefix || "ts-"}${captureName}`;
+      return Decoration.mark({
+        class: className,
+      });
+    }
+
+    // Use inline styles
+    const color = this.getColorForCapture(captureName);
+    return Decoration.mark({
+      attributes: { style: `color: ${color}` },
     });
   }
 
-  /**
-   * Get CodeMirror mark options for a capture name
-   */
-  private getMarkOptions(captureName: string): any {
-    if (this.highlightConfig.useCssClasses) {
-      return {
-        className: `${this.highlightConfig.cssPrefix}${captureName}`,
-      };
-    }
-
-    // Use inline styles with color
-    const color = this.getColorForCapture(captureName);
-    return {
-      css: `color: ${color}`,
-    };
-  }
-
-  /**
-   * Get color for a capture name
-   */
   private getColorForCapture(captureName: string): string {
-    // Check custom color map first
-    if (this.config.colorMap[captureName]) {
+    // Check custom color map first (use hasOwn to avoid prototype pollution)
+    if (this.config.colorMap && Object.hasOwn(this.config.colorMap, captureName)) {
       return this.config.colorMap[captureName];
     }
 
     // Use index-based color from palette
-    if (!this.query) return 'black';
-
     const captureIndex = this.query.captureNames.indexOf(captureName);
-    const colors = this.highlightConfig.colors!;
-    return colors[captureIndex % colors.length];
+    const color = DEFAULT_COLORS[captureIndex % DEFAULT_COLORS.length];
+    return color;
   }
 
-  /**
-   * Get the current parse tree
-   */
-  getTree(): Parser.Tree | null {
-    return this.tree;
-  }
-
-  /**
-   * Get the current parser
-   */
-  getParser(): Parser | null {
-    return this.parser;
-  }
-
-  /**
-   * Get parse count (useful for debugging)
-   */
-  getParseCount(): number {
-    return this.parseCount;
-  }
-
-  /**
-   * Manually trigger a re-parse
-   */
-  async reparse(): Promise<void> {
-    await this.handleCodeChange(this.editor, null);
-  }
-
-  /**
-   * Manually trigger a re-highlight
-   */
-  rehighlight(): void {
-    this.runTreeQuery();
-  }
-
-  /**
-   * Clean up resources
-   */
-  dispose(): void {
+  destroy() {
     if (this.tree) {
       this.tree.delete();
-      this.tree = null;
     }
-
-    if (this.parseDebounceTimer !== null) {
-      clearTimeout(this.parseDebounceTimer);
-    }
-
-    if (this.highlightDebounceTimer !== null) {
-      clearTimeout(this.highlightDebounceTimer);
-    }
-
-    // Remove event listeners
-    this.editor.off('changes', this.handleCodeChange);
-    this.editor.off('viewportChange', this.scheduleHighlight);
   }
 }
 
 /**
- * Utility function to create a debounced function
+ * Create a CodeMirror 6 extension for tree-sitter syntax highlighting
  */
-export function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number,
-  immediate = false,
-): (...args: Parameters<T>) => void {
-  let timeout: number | null = null;
+export function treeSitter(config: TreeSitterConfig): Extension {
+  console.log("[TreeSitter] Initializing parser:", config.parser);
+  console.log("[TreeSitter] Language:", config.parser.getLanguage());
 
-  return function(this: any, ...args: Parameters<T>) {
-    const context = this;
+  const query = config.parser.getLanguage().query(config.highlightQuery);
+  console.log("[TreeSitter] Query created with captures:", query.captureNames);
+  console.log("[TreeSitter] Query pattern count:", query.patternCount);
+  console.log("[TreeSitter] Full query:", config.highlightQuery);
 
-    const later = () => {
-      timeout = null;
-      if (!immediate) {
-        func.apply(context, args);
+  const viewPlugin = ViewPlugin.fromClass(
+    class extends TreeSitterViewPlugin {
+      constructor(view: EditorView) {
+        super(view, config.parser, query, config);
       }
-    };
+    },
+    {
+      decorations: (plugin) => plugin.decorations,
+    },
+  );
 
-    const callNow = immediate && !timeout;
-
-    if (timeout !== null) {
-      clearTimeout(timeout);
-    }
-
-    timeout = window.setTimeout(later, wait);
-
-    if (callNow) {
-      func.apply(context, args);
-    }
-  };
+  return [treeField, viewPlugin];
 }
+
+/**
+ * Get the current parse tree from an EditorView
+ */
+export function getTree(view: EditorView): Parser.Tree | null {
+  return view.state.field(treeField, false) ?? null;
+}
+
+/**
+ * Helper to create a tree-sitter parser for CodeMirror
+ */
+export async function createTreeSitterParser(
+  TreeSitter: typeof Parser,
+  grammarPath: string,
+): Promise<Parser> {
+  await TreeSitter.init();
+
+  const parser = new TreeSitter();
+  const language = await TreeSitter.Language.load(grammarPath);
+  parser.setLanguage(language);
+
+  return parser;
+}
+
+/**
+ * Utility: Create a facet-based configuration for tree-sitter
+ * (Advanced usage for more complex scenarios)
+ */
+export interface TreeSitterFacetConfig {
+  colorMap?: Record<string, string>;
+  useCssClasses?: boolean;
+  cssPrefix?: string;
+}
+
+export const treeSitterFacet = Facet.define<
+  TreeSitterFacetConfig,
+  TreeSitterFacetConfig
+>({
+  combine(configs) {
+    return {
+      colorMap: configs.reduce((acc, c) => ({ ...acc, ...c.colorMap }), {}),
+      useCssClasses: configs.some((c) => c.useCssClasses),
+      cssPrefix: configs.find((c) => c.cssPrefix)?.cssPrefix || "ts-",
+    };
+  },
+});

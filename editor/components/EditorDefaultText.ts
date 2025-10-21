@@ -1,0 +1,123 @@
+export const text = `node start
+  say "Welcome to the adventure!"
+  say "You have #{@gold} gold and #{@health} HP."
+  
+  @visited_start = true
+  @visit_count = @visit_count + 1
+  
+  choice "Go to shop", :shop
+  choice "Go to forest", :forest, if: @level >= 5
+  choice "Rest at inn", :inn, if: @gold >= 20 && @health < 100
+  choice "Check inventory", :inventory, if: !@inventory_empty
+  choice "Quit", :ending
+end
+
+node shop
+  say "Welcome to my shop!"
+  say "I have potions for 50 gold."
+  
+  choice "Buy potion", :buy_potion, if: @gold >= 50
+  choice "Sell items", :sell_items, if: @has_items == true
+  choice "Leave", :start
+end
+
+
+node buy_potion
+  @gold -= 50
+  @health += 30
+  @potions = @potions + 1
+  say "You bought a potion!"
+  say "Health restored to #{@health}."
+  
+  goto :shop
+end
+
+node sell_items
+  @gold += random(10, 50)
+  @has_items = false
+  
+  say "You sold your items for #{@gold} gold."
+  
+  choice "Continue shopping", :shop
+  choice "Leave", :start
+end
+
+node forest
+  say "You enter the dark forest..."
+  
+  @enemy_hp = random(20, 50)
+  @damage = @strength * 2
+  
+  choice "Attack", :battle, if: @enemy_hp > 0
+  choice "Run away", :start
+end
+
+node battle
+  @enemy_hp = @enemy_hp - @damage
+  @health = @health - random(5, 15)
+  
+  say "You deal #{@damage} damage!"
+  say "Enemy HP: #{@enemy_hp}"
+  
+  choice "Continue fighting", :battle, if: @enemy_hp > 0 && @health > 0
+  choice "Victory!", :victory, if: @enemy_hp <= 0
+  choice "Defeat...", :defeat, if: @health <= 0
+end
+
+node victory
+  @gold = @gold + random(50, 100)
+  @xp += 100
+  @level = @level + 1
+  
+  say "You won the battle!"
+  say "Gained #{@gold} gold and leveled up!"
+  
+  goto :start
+end
+
+node defeat
+  @health = 100
+  @gold = @gold / 2
+  
+  goto :start
+end
+
+node inn
+  @gold -= 20
+  @health = 100
+  @potions2 = "nice"
+
+  
+  say "You rest at the inn."
+  say "Health fully restored!"
+  
+  goto :start
+end
+
+node inventory
+  say "Your inventory:"
+  say "Gold: #{@gold}"
+  say "Potions: #{@potions}"
+  say "Level: #{@level}"
+  
+  choice "Back", :start
+end
+
+node inventory
+  say "Your inventory:"
+  say "Gold: #{@gold}"
+  say "Potions: #{@potions}"
+  say "Level: #{@level}"
+  
+  choice "Back", :start
+end
+
+
+
+
+node ending
+  say "Thanks for playing!"
+  say "Final stats:"
+  say "Gold: #{@gold}, Level: #{@level}"
+end
+`
