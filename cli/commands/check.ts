@@ -1,10 +1,12 @@
 import { command } from "cleye";
 import { AggregateLexerError, Lexer } from "../../dsl/lexer.ts";
-import { AggregateParserError, Parser } from "../../dsl/parser.ts";
+import { AggregateParserError, Parser, type ParseResult } from "../../dsl/parser.ts";
 import { Analyzer } from "../../dsl/analyzer.ts";
 import { SeverityLevels, type SeverityLevel } from "../../dsl/types.ts";
 import { createStyler, prettyPrintAnalysisResults } from "../format.ts";
 import fs from "node:fs/promises";
+import TSParser from "web-tree-sitter"
+import { TreeSitterAdapter } from "../../dsl/treeSitterAdapter.ts";
 
 async function readEntireFile(filePath: string) {
   const fileHandle = await fs.open(filePath, "r");
@@ -13,19 +15,12 @@ async function readEntireFile(filePath: string) {
   return { buffer, close: () => fileHandle.close() };
 }
 
-function Severity(level: SeverityLevel): SeverityLevel {
-  if (!SeverityLevels.includes(level)) {
-    throw new Error(`Invalid level: "${level}"`);
-  }
-
-  return level;
-}
 
 export async function check(
   files: string[],
-  flags: { format: string; level: string; noColor: boolean },
+  flags: { format: string; level: string; noColor: boolean, parser: string },
 ) {
-  const { format, level, noColor } = flags;
+  const { format, level, noColor, parser: parserType } = flags;
   const style = createStyler(noColor);
   let closeFile;
 
@@ -35,36 +30,57 @@ export async function check(
       closeFile = close;
 
       const fileContent = buffer.toString();
+      let parseResult: ParseResult
 
-      const lexer = new Lexer(fileContent);
-      const lexResult = lexer.lex();
+      switch(parserType){
+        case "ts":{
+          await TSParser.init();
+          const parser = new TSParser();
+          const Lang = await TSParser.Language.load("tree-sitter-tome/tree-sitter-tome.wasm");
+          parser.setLanguage(Lang);
+          const tree = parser.parse(fileContent);
+          const adapter = new TreeSitterAdapter()
+          const result = adapter.convert(tree, fileContent);
+          parseResult = result;
 
-      if (!lexResult.valid) {
-        switch (format) {
-          case "text":
-            throw new AggregateLexerError(lexResult.errors);
-          case "json":
-            console.log(
-              JSON.stringify(
-                {
-                  type: "lexical_errors",
-                  file: filePath,
-                  errors: lexResult.errors.map((err) => ({
-                    line: err.line,
-                    column: err.column,
-                    message: err.message,
-                  })),
-                },
-                null,
-                2,
-              ),
-            );
+          break;
         }
-        return;
-      }
-      const parser = new Parser(lexResult.value.values(), fileContent);
+        case "tome":{
+          const lexer = new Lexer(fileContent);
+          const lexResult = lexer.lex();
+          if (!lexResult.valid) {
+            switch (format) {
+              case "text":
+                throw new AggregateLexerError(lexResult.errors);
+              case "json":
+                console.log(
+                  JSON.stringify(
+                    {
+                      type: "lexical_errors",
+                      file: filePath,
+                      errors: lexResult.errors.map((err) => ({
+                        line: err.line,
+                        column: err.column,
+                        message: err.message,
+                      })),
+                    },
+                    null,
+                    2,
+                  ),
+                );
+            }
+            return;
+          }
+          const parser = new Parser(lexResult.value.values(), fileContent);
 
-      const parseResult = parser.parse();
+          parseResult = parser.parse();
+          break;
+        }
+        default:{
+          throw new Error(`Unknown parser type: ${parserType}`);
+        }
+      }
+
       if (!parseResult.valid) {
         switch (format) {
           case "text":
@@ -87,8 +103,7 @@ export async function check(
             );
         }
         return;
-      }
-
+    }
       const analyzer = new Analyzer();
       if (parseResult.value) {
         for (const node of parseResult.value.nodes) {
@@ -161,6 +176,22 @@ export async function check(
     }
   }
 }
+
+
+function Severity(level: SeverityLevel): SeverityLevel {
+  if (!SeverityLevels.includes(level)) {
+    throw new Error(`Invalid level: "${level}"`);
+  }
+
+  return level;
+}
+
+function ParserType(parser: "tome" | "ts"): "tome" | "ts" {
+  if (parser !== "tome" && parser !== "ts") {
+    throw new Error(`Invalid parser type: "${parser}"`);
+  }
+  return parser;
+}
 export const checkCommand = command(
   {
     name: "check",
@@ -187,11 +218,16 @@ export const checkCommand = command(
         description: "Disable colorized text output",
         default: false,
       },
+      parser: {
+        type: ParserType,
+        alias: "p",
+        description: "Parser to use: tome (default) or ts",
+        default: "tome",
+      }
     },
   },
   async (argv) => {
     const files = argv._.files as string[];
-    const { format, level, noColor } = argv.flags;
-    await check(files, { format, level, noColor });
+    await check(files, argv.flags);
   },
 );
