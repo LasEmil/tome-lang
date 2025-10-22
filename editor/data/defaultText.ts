@@ -120,4 +120,4 @@ node ending
   say "Final stats:"
   say "Gold: #{@gold}, Level: #{@level}"
 end
-`
+`;

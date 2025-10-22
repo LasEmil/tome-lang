@@ -1,0 +1,141 @@
+@top Program { Node* }
+
+@skip { space | Comment }
+
+Node {
+  kw<"node"> Identifier Newline
+  Indent
+  Statement+
+  Dedent
+  kw<"end">
+}
+
+Statement {
+  Assignment |
+  Say |
+  Choice |
+  Goto
+}
+
+Assignment {
+  Variable AssignmentOp Expression Newline
+}
+
+AssignmentOp {
+  "=" | "+=" | "-=" | "*=" | "/="
+}
+
+Say {
+  kw<"say"> String Newline
+}
+
+Choice {
+  kw<"choice"> String "," Symbol ("," kw<"if"> ":" Expression)? Newline
+}
+
+Goto {
+  kw<"goto"> Symbol Newline
+}
+
+Expression {
+  LogicalOr
+}
+
+LogicalOr {
+  LogicalAnd (LogicalOrOp LogicalAnd)*
+}
+
+LogicalOrOp { "||" }
+
+LogicalAnd {
+  Comparison (LogicalAndOp Comparison)*
+}
+
+LogicalAndOp { "&&" }
+
+Comparison {
+  Term (ComparisonOp Term)?
+}
+
+ComparisonOp {
+  "==" | "!=" | ">=" | "<=" | ">" | "<"
+}
+
+Term {
+  Factor ((AddOp | SubOp) Factor)*
+}
+
+AddOp { "+" }
+SubOp { "-" }
+
+Factor {
+  Unary ((MulOp | DivOp) Unary)*
+}
+
+MulOp { "*" }
+DivOp { "/" }
+
+Unary {
+  UnaryOp Unary |
+  Primary
+}
+
+UnaryOp { "!" | "-" }
+
+Primary {
+  Number |
+  String |
+  @specialize[@name=True]<Identifier, "true"> |
+  @specialize[@name=False]<Identifier, "false"> |
+  Variable |
+  FunctionCall |
+  ParenExpression
+}
+
+FunctionCall {
+  Identifier "(" (Expression ("," Expression)*)? ")"
+}
+
+ParenExpression {
+  "(" Expression ")"
+}
+
+Variable {
+  "@" Identifier
+}
+
+Symbol {
+  ":" Identifier
+}
+
+kw<term> { @specialize[@name={term}]<Identifier, term> }
+
+@tokens {
+  Identifier { $[a-zA-Z_] $[a-zA-Z0-9_]* }
+
+  Number { $[0-9]+ ("." $[0-9]+)? }
+
+  // Strings support interpolation via #{...}
+  // For now, treat as a single token - interpolation will be parsed post-lexing
+  String {
+    '"' (!["\\] | "\\" _)* '"'
+  }
+
+  Comment { "#" ![\n]* }
+
+  space { $[ \t]+ }
+
+  Newline { $[\n\r]+ }
+
+  @precedence { Comment, Number, Identifier }
+
+  "(" ")" "," ":" "@"
+  "=" "+=" "-=" "*=" "/="
+  "==" "!=" ">=" "<=" ">" "<"
+  "&&" "||" "!"
+  "+" "-" "*" "/"
+}
+
+@detectDelim
+
+@external tokens indentation from "./tokens" { Indent, Dedent }

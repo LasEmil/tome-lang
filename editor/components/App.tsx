@@ -4,6 +4,7 @@ import Editor from "./Editor.tsx";
 import { LayoutSwitcher } from "./LayoutSwitcher.tsx";
 import { useLayoutState } from "../lib/state.ts";
 import React from "react";
+import { Toaster } from "./ui/sonner.tsx";
 
 export default function App() {
   const panels = useLayoutState((state) => state.panels);
@@ -45,9 +46,9 @@ export default function App() {
   ];
 
   const visiblePanels = panelConfigs.filter((p) => p.visible);
-
   return (
     <div className="max-h-screen flex flex-col">
+      <Toaster position="bottom-center" />
       <div>
         <LayoutSwitcher />
       </div>
