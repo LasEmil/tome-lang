@@ -9,6 +9,8 @@ export default function Preview() {
   const network = useNodeNetworkStore((state) => state.network);
   const loading = useNodeNetworkStore((state) => state.loading);
 
+  console.log(network);
+
   return (
     <div className="h-full w-full" ref={ref}>
       Dimensions: {dimentions?.width} x {dimentions?.height}

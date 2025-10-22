@@ -7,7 +7,8 @@ export const keywords = new Set([
   "goto",
   "if",
   "end",
-] as const);
+  "else",
+]);
 
 export const symbols = new Map<string, TokenType>([
   ["@", "AT_SIGN"],
@@ -38,9 +39,4 @@ export const operators = new Map<string, TokenType>([
   ["/", "SLASH"],
 ]);
 
-export const literalTypes = new Set([
-  "number",
-  "string",
-  "true",
-  "false",
-] as const);
+export const literalTypes = new Set(["number", "string", "true", "false"]);

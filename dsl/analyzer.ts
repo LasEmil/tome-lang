@@ -106,6 +106,26 @@ export class Analyzer {
   private checkFunctionCalls(node: DialogueNode): void {
     for (const statement of node.statements) {
       switch (statement.type) {
+        case "Conditional":
+          if (statement.condition) {
+            this.traverseExpression(
+              statement.condition,
+              node.id,
+              statement.line,
+              statement.column,
+            );
+          }
+          // Recursively check statements in if branch
+          for (const stmt of statement.statements) {
+            this.checkStatementExpressions(stmt, node.id);
+          }
+          // Check else branch if it exists
+          if (statement.elseStatements) {
+            for (const stmt of statement.elseStatements) {
+              this.checkStatementExpressions(stmt, node.id);
+            }
+          }
+          break;
         case "Assignment":
           this.traverseExpression(
             statement.value,
@@ -115,6 +135,14 @@ export class Analyzer {
           );
           break;
         case "Say":
+          if (statement.condition) {
+            this.traverseExpression(
+              statement.condition,
+              node.id,
+              statement.line,
+              statement.column,
+            );
+          }
           for (const interp of statement.interpolations) {
             this.traverseExpression(
               interp.expression,
@@ -135,6 +163,67 @@ export class Analyzer {
           }
           break;
       }
+    }
+  }
+  // Helper method to avoid code duplication
+  private checkStatementExpressions(
+    statement: Statement,
+    nodeId: string,
+  ): void {
+    switch (statement.type) {
+      case "Assignment":
+        this.traverseExpression(
+          statement.value,
+          nodeId,
+          statement.line,
+          statement.column,
+        );
+        break;
+      case "Say":
+        if (statement.condition) {
+          this.traverseExpression(
+            statement.condition,
+            nodeId,
+            statement.line,
+            statement.column,
+          );
+        }
+        for (const interp of statement.interpolations) {
+          this.traverseExpression(
+            interp.expression,
+            nodeId,
+            statement.line,
+            statement.column,
+          );
+        }
+        break;
+      case "Choice":
+        if (statement.condition) {
+          this.traverseExpression(
+            statement.condition,
+            nodeId,
+            statement.line,
+            statement.column,
+          );
+        }
+        break;
+      case "Conditional":
+        // Recursive case
+        this.traverseExpression(
+          statement.condition,
+          nodeId,
+          statement.line,
+          statement.column,
+        );
+        for (const stmt of statement.statements) {
+          this.checkStatementExpressions(stmt, nodeId);
+        }
+        if (statement.elseStatements) {
+          for (const stmt of statement.elseStatements) {
+            this.checkStatementExpressions(stmt, nodeId);
+          }
+        }
+        break;
     }
   }
 
@@ -372,30 +461,47 @@ export class Analyzer {
     }
   }
 
-  private checkUndefinedVariables(): void {
-    for (const node of this.nodeDefinitions.values()) {
-      for (const statement of node.statements) {
-        // We need to check expressions in assignments, choices, and interpolations
-        const expressionsToCheck: Expression[] = [];
-        if (statement.type === "Assignment") {
-          expressionsToCheck.push(statement.value);
-        } else if (statement.type === "Choice" && statement.condition) {
+  private checkUndefinedVariablesInStatements(
+    statements: Statement[],
+    node: DialogueNode,
+  ): void {
+    for (const statement of statements) {
+      const expressionsToCheck: Expression[] = [];
+      if (statement.type === "Assignment") {
+        expressionsToCheck.push(statement.value);
+      } else if (statement.type === "Choice" && statement.condition) {
+        expressionsToCheck.push(statement.condition);
+      } else if (statement.type === "Say") {
+        statement.interpolations.forEach((interp) =>
+          expressionsToCheck.push(interp.expression),
+        );
+      } else if (statement.type === "Conditional") {
+        if (statement.condition) {
           expressionsToCheck.push(statement.condition);
-        } else if (statement.type === "Say") {
-          statement.interpolations.forEach((interp) =>
-            expressionsToCheck.push(interp.expression),
-          );
         }
-
-        for (const expression of expressionsToCheck) {
-          this.findUndefinedVariablesInExpression(
-            expression,
-            node.id,
-            statement.line,
-            statement.column,
+        // Recursively check statements in if branch
+        this.checkUndefinedVariablesInStatements(statement.statements, node);
+        // Check else branch if it exists
+        if (statement.elseStatements) {
+          this.checkUndefinedVariablesInStatements(
+            statement.elseStatements,
+            node,
           );
         }
       }
+      for (const expression of expressionsToCheck) {
+        this.findUndefinedVariablesInExpression(
+          expression,
+          "", // nodeId is not needed here
+          statement.line,
+          statement.column,
+        );
+      }
+    }
+  }
+  private checkUndefinedVariables(): void {
+    for (const node of this.nodeDefinitions.values()) {
+      this.checkUndefinedVariablesInStatements(node.statements, node);
     }
   }
 
@@ -570,11 +676,17 @@ export class Analyzer {
 
         if (leftType === "any" || rightType === "any") return "any";
 
-        const numericOps = ["+", "-", "*", "/", ">", "<", ">=", "<="];
+        const numericOps = ["+", "-", "*", "/"];
+        const comparisonOps = [">", "<", ">=", "<="];
         const booleanOps = ["&&", "||"];
 
         let mismatch = false;
         if (numericOps.includes(expression.operator)) {
+          if (leftType !== "number" || rightType !== "number") {
+            mismatch = true;
+          }
+        } else if (comparisonOps.includes(expression.operator)) {
+          // Add this check
           if (leftType !== "number" || rightType !== "number") {
             mismatch = true;
           }
@@ -597,6 +709,7 @@ export class Analyzer {
         }
 
         if (numericOps.includes(expression.operator)) return "number";
+        if (comparisonOps.includes(expression.operator)) return "boolean";
         if (booleanOps.includes(expression.operator)) return "boolean";
         if (["==", "!="].includes(expression.operator)) return "boolean";
 

@@ -3,6 +3,7 @@ import type {
   AssignmentStatement,
   AST,
   ChoiceStatement,
+  ConditionalStatement,
   DialogueNode,
   Expression,
   GotoStatement,
@@ -126,20 +127,20 @@ export class Parser {
     }
   }
 
-  static getNodeNetwork(ast: AST): NodeNetwork{
+  static getNodeNetwork(ast: AST): NodeNetwork {
     const nodes = new Set<string>();
-    const links: {source: string, target: string}[] = [];
+    const links: { source: string; target: string }[] = [];
 
-    for(const node of ast.nodes){
+    for (const node of ast.nodes) {
       nodes.add(node.id);
-      for(const stmt of node.statements){
-        if(stmt.type === "Choice" || stmt.type === "Goto"){
-          links.push({source: node.id, target: stmt.target});
+      for (const stmt of node.statements) {
+        if (stmt.type === "Choice" || stmt.type === "Goto") {
+          links.push({ source: node.id, target: stmt.target });
         }
       }
     }
 
-    return {nodes, links};
+    return { nodes, links };
   }
 
   private synchronize(): void {
@@ -216,6 +217,8 @@ export class Parser {
         return this.parseChoice();
       case "GOTO":
         return this.parseGoto();
+      case "IF":
+        return this.parseCondition();
       default: {
         const expected = ["@variable (assignment)", "say", "choice", "goto"];
         this.error(
@@ -288,15 +291,26 @@ export class Parser {
       this.error("Expected string after 'say' keyword", this.peek());
     }
 
+    let condition: Expression | undefined;
+    if (this.match(["COMMA"])) {
+      this.consume("IF", "Expected 'if' keyword for choice condition");
+      this.consume("COLON", "Expected ':' after 'if' keyword");
+      condition = this.parseExpression();
+    }
     this.consume("NEWLINE", "Expected newline after say statement");
 
-    return {
+    const sayStatement: SayStatement = {
       type: "Say",
       text: fullText,
       interpolations,
       line: sayToken.line,
       column: sayToken.column,
     };
+    if (condition) {
+      sayStatement.condition = condition;
+    }
+
+    return sayStatement;
   }
 
   private parseChoice(): ChoiceStatement {
@@ -304,7 +318,10 @@ export class Parser {
     const text = this.consume("STRING", "Expected choice text");
     this.consume("COMMA", "Expected ',' after choice text");
 
-    const colon = this.consume("COLON", "Expected ':' before target node identifier");
+    const colon = this.consume(
+      "COLON",
+      "Expected ':' before target node identifier",
+    );
 
     const target = this.peek();
     if (target.type !== "IDENTIFIER") {
@@ -350,7 +367,7 @@ export class Parser {
   }
 
   private parseGoto(): GotoStatement {
-     this.consume("GOTO", "Expected 'goto' keyword");
+    this.consume("GOTO", "Expected 'goto' keyword");
     const colon = this.consume("COLON", "Expected ':' before node identifier");
 
     const target = this.peek();
@@ -380,6 +397,105 @@ export class Parser {
     };
   }
 
+  private parseCondition(): ConditionalStatement {
+    const ifToken = this.consume("IF", "Expected 'if' keyword");
+    const condition = this.parseExpression();
+    this.consume("NEWLINE", "Expected newline after if condition");
+
+    const statements: Statement[] = [];
+
+    // Expect an indented block
+    this.consume("INDENT", "Expected indented block after 'if' statement");
+
+    while (!this.expect("DEDENT") && !this.isAtEnd()) {
+      this.skipNewlines();
+
+      if (this.expect("DEDENT")) {
+        break;
+      }
+
+      try {
+        statements.push(this.parseStatement());
+      } catch (e) {
+        if (e instanceof ParserError) {
+          this.errors.push(e);
+          // Skip to next statement (next line)
+          while (!this.isAtEnd() && this.peek().type !== "NEWLINE") {
+            this.advance();
+          }
+          if (this.peek().type === "NEWLINE") {
+            this.advance();
+          }
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    // Consume the DEDENT that ends the if block's indentation
+    this.consume("DEDENT", "Expected dedent after 'if' block");
+
+    // Check for else branch
+    let elseStatements: Statement[] | undefined;
+
+    if (this.match(["ELSE"])) {
+      this.consume("NEWLINE", "Expected newline after 'else' keyword");
+
+      // Expect an indented block for else
+      this.consume("INDENT", "Expected indented block after 'else' statement");
+
+      elseStatements = [];
+
+      while (!this.expect("DEDENT") && !this.isAtEnd()) {
+        this.skipNewlines();
+
+        if (this.expect("DEDENT")) {
+          break;
+        }
+
+        try {
+          elseStatements.push(this.parseStatement());
+        } catch (e) {
+          if (e instanceof ParserError) {
+            this.errors.push(e);
+            // Skip to next statement (next line)
+            while (!this.isAtEnd() && this.peek().type !== "NEWLINE") {
+              this.advance();
+            }
+            if (this.peek().type === "NEWLINE") {
+              this.advance();
+            }
+          } else {
+            throw e;
+          }
+        }
+      }
+
+      // Consume the DEDENT that ends the else block
+      this.consume("DEDENT", "Expected dedent after 'else' block");
+    }
+
+    // Consume the END keyword that closes the entire if/else block
+    this.consume("END", "Expected 'end' keyword to close 'if' block");
+
+    // Consume the newline after END
+    this.consume("NEWLINE", "Expected newline after 'end' keyword");
+
+    const result: ConditionalStatement = {
+      type: "Conditional",
+      condition,
+      statements,
+      line: ifToken.line,
+      column: ifToken.column,
+    };
+
+    if (elseStatements) {
+      result.elseStatements = elseStatements;
+    }
+
+    return result;
+  }
+
   // Parse expression using Precedence Climbing
   private parseExpression(): Expression {
     return this.parseLogicalOr();
@@ -397,6 +513,8 @@ export class Parser {
         operator: operator.value as string,
         left: expr,
         right,
+        line: operator.line,
+        column: operator.column,
       };
     }
 
@@ -415,6 +533,8 @@ export class Parser {
         operator: operator.value as string,
         left: expr,
         right,
+        line: operator.line,
+        column: operator.column,
       };
     }
 
@@ -442,6 +562,8 @@ export class Parser {
         right,
         left: expr,
         operator: operator.value as string,
+        line: operator.line,
+        column: operator.column,
       };
     }
 
@@ -460,6 +582,8 @@ export class Parser {
         operator: operator.value as string,
         left: expr,
         right,
+        line: operator.line,
+        column: operator.column,
       };
     }
 
@@ -478,6 +602,8 @@ export class Parser {
         operator: operator.value as string,
         left: expr,
         right,
+        line: operator.line,
+        column: operator.column,
       };
     }
 
