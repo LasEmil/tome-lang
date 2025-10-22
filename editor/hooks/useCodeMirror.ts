@@ -36,7 +36,7 @@ const editorConfig: EditorStateConfig = {
     tomeLanguage,
     EditorView.lineWrapping,
     persistenceExtension,
-    linter(tomeLinter, { delay: 500 }),
+    linter(tomeLinter, { delay: 100 }),
   ],
 };
 
@@ -59,6 +59,7 @@ const getEditorState = (defaultText: string) => {
   }
   return defaultState;
 };
+
 export const useCodeMirror = ({ defaultText }: { defaultText: string }) => {
   const ref = useRef(null);
 

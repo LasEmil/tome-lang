@@ -4,6 +4,8 @@ import type {
   AST,
   ChoiceStatement,
   DialogueNode,
+  Edge,
+  EdgesMap,
   Expression,
   GotoStatement,
   Interpolation,
@@ -123,6 +125,25 @@ export class Parser {
         }
       }
     }
+  }
+
+  static linkNodes(ast: AST): EdgesMap {
+    const nodeMap: EdgesMap = new Map();
+    for (const node of ast.nodes) {
+      const nodeLinks: Edge = {outgoing: new Set([...node.statements.filter(stmt => stmt.type === "Choice" || stmt.type === "Goto").map(stmt => stmt.target)]), incoming: new Set()};
+      nodeMap.set(node.id, nodeLinks);
+    }
+    
+    // Populate incoming edges
+    for (const [nodeId, edges] of nodeMap.entries()) {
+      for (const targetId of edges.outgoing) {
+        const targetNode = nodeMap.get(targetId);
+        if (targetNode) {
+          targetNode.incoming.add(nodeId);
+        }
+      }
+    }
+    return nodeMap;
   }
 
   private synchronize(): void {
@@ -333,7 +354,7 @@ export class Parser {
   }
 
   private parseGoto(): GotoStatement {
-    const gotoToken = this.consume("GOTO", "Expected 'goto' keyword");
+     this.consume("GOTO", "Expected 'goto' keyword");
     const colon = this.consume("COLON", "Expected ':' before node identifier");
 
     const target = this.peek();

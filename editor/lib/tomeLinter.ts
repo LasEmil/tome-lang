@@ -4,6 +4,7 @@ import type { EditorView } from "codemirror";
 import { Lexer } from "../../dsl/lexer.ts";
 import { Parser } from "../../dsl/parser.ts";
 import { Analyzer } from "../../dsl/analyzer.ts";
+import { useDiagnosticStore, useNodeStore } from "./state.ts";
 
 // Helper function to get word boundaries for better error highlighting
 export const getWordRange = (doc: Text, line: number, column: number): { from: number; to: number } => {
@@ -71,14 +72,14 @@ export const getWordRange = (doc: Text, line: number, column: number): { from: n
 };
 
 
-// Cache for preserving diagnostics across linter runs
-let lastValidAnalysis: { diagnostics: Diagnostic[]; text: string } | null = null;
 export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
   const diagnostics: Diagnostic[] = [];
+  useNodeStore.getState().setLoading(true)
+  const diagnosticsStore = useDiagnosticStore.getState();
+
   const text = view.state.doc.toString();
   const lexer = new Lexer(text)
   const lexResult = lexer.lex();
-  console.log("Lexer result:", lexResult);
   if(!lexResult.valid) {
     for(const err of lexResult.errors) {
       const range = getWordRange(view.state.doc, err.line, err.column);
@@ -91,8 +92,8 @@ export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
     }
 
     // Preserve previous analyzer warnings/suggestions if available
-    if (lastValidAnalysis) {
-      return [...diagnostics, ...lastValidAnalysis.diagnostics.filter(d => d.severity !== "error")];
+    if (diagnosticsStore) {
+      return [...diagnostics, ...diagnosticsStore.diagnostics.filter(d => d.severity !== "error")];
     }
 
     return diagnostics;
@@ -100,7 +101,6 @@ export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
 
   const parser = new Parser(lexResult.value.values(), text);
   const parseResult = parser.parse();
-  console.log("Parser result:", parseResult);
   if(!parseResult.valid) {
     for(const err of parseResult.errors) {
       const range = getWordRange(view.state.doc, err.line, err.column);
@@ -113,12 +113,19 @@ export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
     }
 
     // Preserve previous analyzer warnings/suggestions if available
-    if (lastValidAnalysis) {
-      return [...diagnostics, ...lastValidAnalysis.diagnostics.filter(d => d.severity !== "error")];
+    if (diagnosticsStore) {
+      return [...diagnostics, ...diagnosticsStore.diagnostics.filter(d => d.severity !== "error")];
     }
 
     return diagnostics;
   }
+
+  if(!parseResult.value) {
+    return diagnostics;
+  }
+
+  const linkedNodes = Parser.linkNodes(parseResult.value);
+  useNodeStore.getState().setNodes(linkedNodes);
 
   const analyzer = new Analyzer();
   if(parseResult.value) {
@@ -128,7 +135,6 @@ export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
   }
 
   const analysisResult = analyzer.finalizeAnalysis()
-  console.log("Analysis result:", analysisResult);
   if(!analysisResult.valid) {
     for(const err of analysisResult.errors) {
       const range = getWordRange(view.state.doc, err.line, err.column);
@@ -163,8 +169,7 @@ export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
     }
   }
 
-  // Cache successful analysis for future use
-  lastValidAnalysis = { diagnostics, text };
+  diagnosticsStore.setDiagnostics(diagnostics, text);
 
   return diagnostics;
 };

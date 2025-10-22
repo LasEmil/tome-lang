@@ -5,6 +5,7 @@ import { LayoutSwitcher } from "./LayoutSwitcher.tsx";
 import { useLayoutState } from "../lib/state.ts";
 import React from "react";
 import { Toaster } from "./ui/sonner.tsx";
+import Preview from "./Preview.tsx";
 
 export default function App() {
   const panels = useLayoutState((state) => state.panels);
@@ -12,7 +13,7 @@ export default function App() {
   const panelConfigs = [
     {
       id: "editor",
-      visible: panels.editor.value,
+      visible: panels.editor?.value,
       component: (
         <Panel
           defaultSize={40}
@@ -27,16 +28,16 @@ export default function App() {
     },
     {
       id: "preview",
-      visible: panels.preview.value,
+      visible: panels.preview?.value,
       component: (
         <Panel minSize={30} defaultSize={30} id="preview-panel" order={2}>
-          Preview
+          <Preview />
         </Panel>
       ),
     },
     {
       id: "player",
-      visible: panels.player.value,
+      visible: panels.player?.value,
       component: (
         <Panel defaultSize={30} minSize={20} id="player-panel" order={3}>
           Player

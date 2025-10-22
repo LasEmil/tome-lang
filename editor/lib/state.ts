@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import type { EdgesMap } from "../../dsl/types.ts";
+import type { Diagnostic } from "@codemirror/lint";
 
 type Panel = {
   id: string;
@@ -8,7 +10,6 @@ type Panel = {
 type LayoutStoreState = { panels: Record<Panel["id"], Panel> };
 type LayoutStoreActions = {
   updatePanels: (newPanelsArray: string[]) => void;
-  togglePanel: (panelId: Panel["id"]) => void;
 };
 
 type LayoutStore = LayoutStoreState & LayoutStoreActions;
@@ -32,16 +33,35 @@ export const useLayoutState = create<LayoutStore>((set) => ({
         ),
       };
     }),
-  togglePanel: (panelId: Panel["id"]) =>
-    set((state) => {
-      return {
-        panels: {
-          ...state.panels,
-          [panelId]: {
-            ...state.panels[panelId],
-            value: !state.panels[panelId].value,
-          },
-        },
-      };
-    }),
 }));
+
+type NodeStoreState = {
+  nodes: EdgesMap;
+  loading: boolean;
+}
+type NodeStoreActions = {
+  setNodes: (nodes: EdgesMap) => void;
+  setLoading: (loading: boolean) => void;
+};
+
+type NodeStore = NodeStoreState & NodeStoreActions;
+export const useNodeStore = create<NodeStore>((set) => ({
+  nodes: new Map(),
+  loading: true,
+  setNodes: (nodes: EdgesMap) => set({ nodes, loading: false }),
+  setLoading: (loading: boolean) => set({ loading })
+}));
+
+type DiagnosticStoreState = {
+  diagnostics: Diagnostic[]
+  text: string
+};
+type DiagnosticStoreActions = {
+  setDiagnostics: (diagnostics: Diagnostic[], text: string) => void;
+};
+type DiagnosticStore = DiagnosticStoreState & DiagnosticStoreActions;
+export const useDiagnosticStore = create<DiagnosticStore>((set => ({
+  diagnostics: [],
+  text: "",
+  setDiagnostics: (diagnostics: Diagnostic[], text: string) => set({ diagnostics, text })
+})));
