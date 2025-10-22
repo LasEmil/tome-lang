@@ -1,7 +1,7 @@
-import { ToggleGroupItem } from "./ui/toggle-group";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import { cn } from "../lib/utils";
-import { useLayoutState } from "../lib/state";
+import { ToggleGroupItem } from "./ui/toggle-group.tsx";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip.tsx";
+import { cn } from "../lib/utils.ts";
+import { useLayoutState } from "../lib/state.ts";
 
 type LayoutButtonProps = {
   name: string;
@@ -9,7 +9,7 @@ type LayoutButtonProps = {
   iconOff: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 };
 const LayoutButton = ({ name, iconOn, iconOff }: LayoutButtonProps) => {
-  const toggled = useLayoutState((state) => state.panels[name].value);
+  const toggled = useLayoutState((state) => state.panels[name]?.value);
   const IconOn = iconOn;
   const IconOff = iconOff;
   return (

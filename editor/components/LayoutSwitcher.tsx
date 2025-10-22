@@ -6,14 +6,14 @@ import {
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
-import { ToggleGroup } from "./ui/toggle-group";
-import LayoutButton from "./LayoutButton";
-import { useLayoutState } from "../lib/state";
+import { ToggleGroup } from "./ui/toggle-group.tsx";
+import LayoutButton from "./LayoutButton.tsx";
+import { useLayoutState } from "../lib/state.ts";
 
 export function LayoutSwitcher() {
   const panelsState = useLayoutState((state) => state.panels);
   const panels = Object.keys(panelsState).filter(
-    (key) => panelsState[key].value,
+    (key) => panelsState[key]?.value,
   );
   const updatePanels = useLayoutState((state) => state.updatePanels);
 

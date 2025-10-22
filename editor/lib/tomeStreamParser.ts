@@ -66,7 +66,10 @@ export const tomeStreamParser: StreamParser<TomeState> = {
         // Consume string content
         while (!stream.eol()) {
           const ch = stream.peek();
-          if (ch === '"' || (ch === "#" && stream.string[stream.pos + 1] === "{")) {
+          if (
+            ch === '"' ||
+            (ch === "#" && stream.string[stream.pos + 1] === "{")
+          ) {
             break;
           }
           stream.next();

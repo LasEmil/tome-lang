@@ -7,7 +7,11 @@ import { Analyzer } from "../../dsl/analyzer.ts";
 import { useDiagnosticStore, useNodeNetworkStore } from "./state.ts";
 
 // Helper function to get word boundaries for better error highlighting
-export const getWordRange = (doc: Text, line: number, column: number): { from: number; to: number } => {
+export const getWordRange = (
+  doc: Text,
+  line: number,
+  column: number,
+): { from: number; to: number } => {
   const docLine = doc.line(line);
   const lineText = docLine.text;
   const pos = column - 1; // Convert to 0-indexed
@@ -16,7 +20,7 @@ export const getWordRange = (doc: Text, line: number, column: number): { from: n
   if (pos < 0 || pos >= lineText.length) {
     return {
       from: docLine.from + Math.max(0, Math.min(pos, lineText.length - 1)),
-      to: docLine.from + Math.max(1, Math.min(pos + 1, lineText.length))
+      to: docLine.from + Math.max(1, Math.min(pos + 1, lineText.length)),
     };
   }
 
@@ -42,7 +46,7 @@ export const getWordRange = (doc: Text, line: number, column: number): { from: n
     if (quoteEnd < lineText.length && pos >= quoteStart && pos <= quoteEnd) {
       return {
         from: docLine.from + quoteStart,
-        to: docLine.from + quoteEnd + 1 // Include closing quote
+        to: docLine.from + quoteEnd + 1, // Include closing quote
       };
     }
   }
@@ -67,21 +71,20 @@ export const getWordRange = (doc: Text, line: number, column: number): { from: n
 
   return {
     from: docLine.from + start,
-    to: docLine.from + end
+    to: docLine.from + end,
   };
 };
 
-
 export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
   const diagnostics: Diagnostic[] = [];
-  useNodeNetworkStore.getState().setLoading(true)
+  useNodeNetworkStore.getState().setLoading(true);
   const diagnosticsStore = useDiagnosticStore.getState();
 
   const text = view.state.doc.toString();
-  const lexer = new Lexer(text)
+  const lexer = new Lexer(text);
   const lexResult = lexer.lex();
-  if(!lexResult.valid) {
-    for(const err of lexResult.errors) {
+  if (!lexResult.valid) {
+    for (const err of lexResult.errors) {
       const range = getWordRange(view.state.doc, err.line, err.column);
       diagnostics.push({
         from: range.from,
@@ -93,7 +96,10 @@ export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
 
     // Preserve previous analyzer warnings/suggestions if available
     if (diagnosticsStore) {
-      return [...diagnostics, ...diagnosticsStore.diagnostics.filter(d => d.severity !== "error")];
+      return [
+        ...diagnostics,
+        ...diagnosticsStore.diagnostics.filter((d) => d.severity !== "error"),
+      ];
     }
 
     return diagnostics;
@@ -101,8 +107,8 @@ export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
 
   const parser = new Parser(lexResult.value.values(), text);
   const parseResult = parser.parse();
-  if(!parseResult.valid) {
-    for(const err of parseResult.errors) {
+  if (!parseResult.valid) {
+    for (const err of parseResult.errors) {
       const range = getWordRange(view.state.doc, err.line, err.column);
       diagnostics.push({
         from: range.from,
@@ -114,29 +120,32 @@ export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
 
     // Preserve previous analyzer warnings/suggestions if available
     if (diagnosticsStore) {
-      return [...diagnostics, ...diagnosticsStore.diagnostics.filter(d => d.severity !== "error")];
+      return [
+        ...diagnostics,
+        ...diagnosticsStore.diagnostics.filter((d) => d.severity !== "error"),
+      ];
     }
 
     return diagnostics;
   }
 
-  if(!parseResult.value) {
+  if (!parseResult.value) {
     return diagnostics;
   }
 
-  const network = Parser.getNodeNetwork(parseResult.value)
+  const network = Parser.getNodeNetwork(parseResult.value);
   useNodeNetworkStore.getState().setNetwork(network);
 
   const analyzer = new Analyzer();
-  if(parseResult.value) {
-    for(const node of parseResult.value.nodes){
+  if (parseResult.value) {
+    for (const node of parseResult.value.nodes) {
       analyzer.analyzeNode(node);
     }
   }
 
-  const analysisResult = analyzer.finalizeAnalysis()
-  if(!analysisResult.valid) {
-    for(const err of analysisResult.errors) {
+  const analysisResult = analyzer.finalizeAnalysis();
+  if (!analysisResult.valid) {
+    for (const err of analysisResult.errors) {
       const range = getWordRange(view.state.doc, err.line, err.column);
       diagnostics.push({
         from: range.from,
@@ -156,7 +165,7 @@ export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
       });
     }
 
-    if(analysisResult.suggestions){
+    if (analysisResult.suggestions) {
       for (const info of analysisResult.suggestions) {
         const range = getWordRange(view.state.doc, info.line, info.column);
         diagnostics.push({

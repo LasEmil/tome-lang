@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { EdgesMap, NodeNetwork } from "../../dsl/types.ts";
+import type { NodeNetwork } from "../../dsl/types.ts";
 import type { Diagnostic } from "@codemirror/lint";
 
 type Panel = {
@@ -38,7 +38,7 @@ export const useLayoutState = create<LayoutStore>((set) => ({
 type NodeNetworkStoreState = {
   network: NodeNetwork | null;
   loading: boolean;
-}
+};
 type NodeNetworkStoreActions = {
   setNetwork: (network: NodeNetwork) => void;
   setLoading: (loading: boolean) => void;
@@ -49,19 +49,20 @@ export const useNodeNetworkStore = create<NodeNetworkStore>((set) => ({
   network: null,
   loading: true,
   setNetwork: (network: NodeNetwork) => set({ network, loading: false }),
-  setLoading: (loading: boolean) => set({ loading })
+  setLoading: (loading: boolean) => set({ loading }),
 }));
 
 type DiagnosticStoreState = {
-  diagnostics: Diagnostic[]
-  text: string
+  diagnostics: Diagnostic[];
+  text: string;
 };
 type DiagnosticStoreActions = {
   setDiagnostics: (diagnostics: Diagnostic[], text: string) => void;
 };
 type DiagnosticStore = DiagnosticStoreState & DiagnosticStoreActions;
-export const useDiagnosticStore = create<DiagnosticStore>((set => ({
+export const useDiagnosticStore = create<DiagnosticStore>((set) => ({
   diagnostics: [],
   text: "",
-  setDiagnostics: (diagnostics: Diagnostic[], text: string) => set({ diagnostics, text })
-})));
+  setDiagnostics: (diagnostics: Diagnostic[], text: string) =>
+    set({ diagnostics, text }),
+}));
