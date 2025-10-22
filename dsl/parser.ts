@@ -287,7 +287,7 @@ export class Parser {
     const text = this.consume("STRING", "Expected choice text");
     this.consume("COMMA", "Expected ',' after choice text");
 
-    this.consume("COLON", "Expected ':' before target node identifier");
+    const colon = this.consume("COLON", "Expected ':' before target node identifier");
 
     const target = this.peek();
     if (target.type !== "IDENTIFIER") {
@@ -319,8 +319,10 @@ export class Parser {
       type: "Choice",
       text: text.value as string,
       target: target.value as string,
-      line: text.line,
-      column: text.column,
+      line: colon.line,
+      column: colon.column,
+      textLine: text.line,
+      textColumn: text.column,
     };
 
     if (condition) {
@@ -332,7 +334,7 @@ export class Parser {
 
   private parseGoto(): GotoStatement {
     const gotoToken = this.consume("GOTO", "Expected 'goto' keyword");
-    this.consume("COLON", "Expected ':' before node identifier");
+    const colon = this.consume("COLON", "Expected ':' before node identifier");
 
     const target = this.peek();
     if (target.type !== "IDENTIFIER") {
@@ -356,8 +358,8 @@ export class Parser {
     return {
       type: "Goto",
       target: target.value as string,
-      line: gotoToken.line,
-      column: gotoToken.column,
+      line: colon.line,
+      column: colon.column,
     };
   }
 
@@ -497,7 +499,8 @@ export class Parser {
       };
     }
 
-    if (this.match(["AT_SIGN"])) {
+    if (this.expect("AT_SIGN")) {
+      const atSign = this.advance(); // Get the @ token for position
       const name = this.consume(
         "IDENTIFIER",
         "Expected variable name after '@'",
@@ -505,6 +508,8 @@ export class Parser {
       return {
         type: "Variable",
         name: name.value as string,
+        line: atSign.line,
+        column: atSign.column,
       };
     }
 
@@ -561,6 +566,8 @@ export class Parser {
       type: "FunctionCall",
       name: name.value as string,
       args,
+      line: name.line,
+      column: name.column,
     };
   }
 

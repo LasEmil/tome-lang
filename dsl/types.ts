@@ -115,8 +115,10 @@ export interface ChoiceStatement {
   text: string;
   target: string;
   condition?: Expression;
-  line: number;
-  column: number;
+  line: number; // Position of the target (colon)
+  column: number; // Position of the target (colon)
+  textLine?: number; // Position of the choice text
+  textColumn?: number; // Position of the choice text
 }
 
 export interface GotoStatement {
@@ -136,11 +138,15 @@ export type Expression =
 export interface LiteralExpression {
   type: "Literal";
   value: string | number | boolean;
+  line?: number;
+  column?: number;
 }
 
 export interface VariableExpression {
   type: "Variable";
   name: string;
+  line?: number;
+  column?: number;
 }
 
 export interface BinaryExpression {
@@ -154,12 +160,16 @@ export interface UnaryExpression {
   type: "UnaryOp";
   operator: string;
   operand: Expression;
+  line?: number;
+  column?: number;
 }
 
 export interface FunctionCallExpression {
   type: "FunctionCall";
   name: string;
   args: Expression[];
+  line?: number;
+  column?: number;
 }
 
 export type AnalysisErrorType =

@@ -78,13 +78,11 @@ export class Analyzer {
     );
 
     if (!hasNavigation) {
-      // To provide a better error, we'll point to the last line of the node.
-      const lastStatement = node.statements[node.statements.length - 1]!;
       this.warnings.push({
         type: "dead_end",
         message: `Node '${node.id}' is a dead end; it has no choices or goto statements to continue the dialogue.`,
-        line: lastStatement.line,
-        column: lastStatement.column,
+        line: node.line,
+        column: node.column,
         node: node.id,
         severity: "warning",
       });
@@ -320,8 +318,8 @@ export class Analyzer {
               this.errors.push({
                 type: "invalid_function_args",
                 message: `Function 'random' expects exactly 2 arguments, but got ${expression.args.length}.`,
-                line,
-                column,
+                line: expression.line ?? line,
+                column: expression.column ?? column,
                 node: nodeId,
                 severity: "error",
               });
@@ -331,8 +329,8 @@ export class Analyzer {
             this.errors.push({
               type: "invalid_function",
               message: `Unknown function called: '${expression.name}'.`,
-              line,
-              column,
+              line: expression.line ?? line,
+              column: expression.column ?? column,
               node: nodeId,
               severity: "error",
             });
@@ -413,8 +411,8 @@ export class Analyzer {
           this.warnings.push({
             type: "undefined_variable",
             message: `Variable '@${expression.name}' is used but never assigned a value.`,
-            line,
-            column,
+            line: expression.line ?? line,
+            column: expression.column ?? column,
             node: nodeId,
             severity: "warning",
           });
@@ -461,8 +459,8 @@ export class Analyzer {
           this.warnings.push({
             type: "suspicious_condition",
             message: `The condition for this choice is always false, making it unreachable.`,
-            line: statement.line,
-            column: statement.column,
+            line: statement.condition.line ?? statement.line,
+            column: statement.condition.column ?? statement.column,
             node: node.id,
             severity: "warning",
           });
@@ -590,8 +588,8 @@ export class Analyzer {
           this.warnings.push({
             type: "type_mismatch",
             message: `Cannot apply operator '${expression.operator}' to types '${leftType}' and '${rightType}'.`,
-            line: context.statement.line,
-            column: context.statement.column,
+            line: expression.line ?? context.statement.line,
+            column: expression.column ?? context.statement.column,
             node: context.node.id,
             severity: "warning",
           });
@@ -682,8 +680,8 @@ export class Analyzer {
           this.warnings.push({
             type: "identical_choice",
             message: `Node '${node.id}' has duplicate choices with the text: "${statement.text}"`,
-            line: statement.line,
-            column: statement.column,
+            line: statement.textLine ?? statement.line,
+            column: statement.textColumn ?? statement.column,
             node: node.id,
             severity: "warning",
           });
