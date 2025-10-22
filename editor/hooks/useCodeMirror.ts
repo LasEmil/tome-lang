@@ -45,18 +45,18 @@ const getEditorState = (defaultText: string) => {
     ...editorConfig,
     doc: defaultText,
   });
-  // if (!localStorage) {
-  //   return defaultState;
-  // }
-  // const savedContent = localStorage.getItem("editorContent");
-  // try {
-  //   if (savedContent) {
-  //     const parsed = JSON.parse(savedContent);
-  //     return EditorState.fromJSON(parsed, editorConfig);
-  //   }
-  // } catch (e) {
-  //   console.error("Failed to parse saved editor content:", e);
-  // }
+  if (!localStorage) {
+    return defaultState;
+  }
+  const savedContent = localStorage.getItem("editorContent");
+  try {
+    if (savedContent) {
+      const parsed = JSON.parse(savedContent);
+      return EditorState.fromJSON(parsed, editorConfig);
+    }
+  } catch (e) {
+    console.error("Failed to parse saved editor content:", e);
+  }
   return defaultState;
 };
 
