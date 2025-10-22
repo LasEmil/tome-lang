@@ -47,7 +47,7 @@ export default function App() {
 
   const visiblePanels = panelConfigs.filter((p) => p.visible);
   return (
-    <div className="max-h-screen flex flex-col">
+    <div className="h-screen flex flex-col">
       <Toaster position="bottom-center" />
       <div>
         <LayoutSwitcher />
