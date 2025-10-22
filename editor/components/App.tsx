@@ -16,7 +16,7 @@ export default function App() {
       visible: panels.editor?.value,
       component: (
         <Panel
-          defaultSize={40}
+          defaultSize={50}
           minSize={20}
           id="editor-panel"
           order={1}
@@ -30,7 +30,7 @@ export default function App() {
       id: "preview",
       visible: panels.preview?.value,
       component: (
-        <Panel minSize={30} defaultSize={30} id="preview-panel" order={2}>
+        <Panel minSize={15} defaultSize={25} id="preview-panel" order={2}>
           <Preview />
         </Panel>
       ),
@@ -39,7 +39,7 @@ export default function App() {
       id: "player",
       visible: panels.player?.value,
       component: (
-        <Panel defaultSize={30} minSize={20} id="player-panel" order={3}>
+        <Panel defaultSize={25} minSize={20} id="player-panel" order={3}>
           Player
         </Panel>
       ),

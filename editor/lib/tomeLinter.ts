@@ -4,7 +4,7 @@ import type { EditorView } from "codemirror";
 import { Lexer } from "../../dsl/lexer.ts";
 import { Parser } from "../../dsl/parser.ts";
 import { Analyzer } from "../../dsl/analyzer.ts";
-import { useDiagnosticStore, useNodeStore } from "./state.ts";
+import { useDiagnosticStore, useNodeNetworkStore } from "./state.ts";
 
 // Helper function to get word boundaries for better error highlighting
 export const getWordRange = (doc: Text, line: number, column: number): { from: number; to: number } => {
@@ -74,7 +74,7 @@ export const getWordRange = (doc: Text, line: number, column: number): { from: n
 
 export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
   const diagnostics: Diagnostic[] = [];
-  useNodeStore.getState().setLoading(true)
+  useNodeNetworkStore.getState().setLoading(true)
   const diagnosticsStore = useDiagnosticStore.getState();
 
   const text = view.state.doc.toString();
@@ -124,8 +124,8 @@ export const tomeLinter = (view: EditorView): readonly Diagnostic[] => {
     return diagnostics;
   }
 
-  const linkedNodes = Parser.linkNodes(parseResult.value);
-  useNodeStore.getState().setNodes(linkedNodes);
+  const network = Parser.getNodeNetwork(parseResult.value)
+  useNodeNetworkStore.getState().setNetwork(network);
 
   const analyzer = new Analyzer();
   if(parseResult.value) {

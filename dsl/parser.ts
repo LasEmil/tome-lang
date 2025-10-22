@@ -4,11 +4,10 @@ import type {
   AST,
   ChoiceStatement,
   DialogueNode,
-  Edge,
-  EdgesMap,
   Expression,
   GotoStatement,
   Interpolation,
+  NodeNetwork,
   SayStatement,
   Statement,
   Token,
@@ -127,23 +126,20 @@ export class Parser {
     }
   }
 
-  static linkNodes(ast: AST): EdgesMap {
-    const nodeMap: EdgesMap = new Map();
-    for (const node of ast.nodes) {
-      const nodeLinks: Edge = {outgoing: new Set([...node.statements.filter(stmt => stmt.type === "Choice" || stmt.type === "Goto").map(stmt => stmt.target)]), incoming: new Set()};
-      nodeMap.set(node.id, nodeLinks);
-    }
-    
-    // Populate incoming edges
-    for (const [nodeId, edges] of nodeMap.entries()) {
-      for (const targetId of edges.outgoing) {
-        const targetNode = nodeMap.get(targetId);
-        if (targetNode) {
-          targetNode.incoming.add(nodeId);
+  static getNodeNetwork(ast: AST): NodeNetwork{
+    const nodes = new Set<string>();
+    const links: {source: string, target: string}[] = [];
+
+    for(const node of ast.nodes){
+      nodes.add(node.id);
+      for(const stmt of node.statements){
+        if(stmt.type === "Choice" || stmt.type === "Goto"){
+          links.push({source: node.id, target: stmt.target});
         }
       }
     }
-    return nodeMap;
+
+    return {nodes, links};
   }
 
   private synchronize(): void {

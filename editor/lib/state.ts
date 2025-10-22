@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { EdgesMap } from "../../dsl/types.ts";
+import type { EdgesMap, NodeNetwork } from "../../dsl/types.ts";
 import type { Diagnostic } from "@codemirror/lint";
 
 type Panel = {
@@ -35,20 +35,20 @@ export const useLayoutState = create<LayoutStore>((set) => ({
     }),
 }));
 
-type NodeStoreState = {
-  nodes: EdgesMap;
+type NodeNetworkStoreState = {
+  network: NodeNetwork | null;
   loading: boolean;
 }
-type NodeStoreActions = {
-  setNodes: (nodes: EdgesMap) => void;
+type NodeNetworkStoreActions = {
+  setNetwork: (network: NodeNetwork) => void;
   setLoading: (loading: boolean) => void;
 };
 
-type NodeStore = NodeStoreState & NodeStoreActions;
-export const useNodeStore = create<NodeStore>((set) => ({
-  nodes: new Map(),
+type NodeNetworkStore = NodeNetworkStoreState & NodeNetworkStoreActions;
+export const useNodeNetworkStore = create<NodeNetworkStore>((set) => ({
+  network: null,
   loading: true,
-  setNodes: (nodes: EdgesMap) => set({ nodes, loading: false }),
+  setNetwork: (network: NodeNetwork) => set({ network, loading: false }),
   setLoading: (loading: boolean) => set({ loading })
 }));
 

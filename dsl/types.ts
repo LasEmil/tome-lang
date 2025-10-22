@@ -241,5 +241,7 @@ export type InferredType = "number" | "string" | "boolean" | "any";
 export const SeverityLevels = ["error", "warning", "info"] as const;
 export type SeverityLevel = (typeof SeverityLevels)[number];
 
-export type Edge = {outgoing: Set<string>, incoming: Set<string>};
-export type EdgesMap = Map<string, Edge>;
+export type NodeNetwork = {
+  nodes: Set<string>;
+  links: {source: string, target: string}[]
+}
