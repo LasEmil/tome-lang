@@ -1,0 +1,22 @@
+diff --git a/node_modules/monaco-tree-sitter/lib/highlighter.js b/node_modules/monaco-tree-sitter/lib/highlighter.js
+index b2c8550..9c7d00f 100644
+--- a/node_modules/monaco-tree-sitter/lib/highlighter.js
++++ b/node_modules/monaco-tree-sitter/lib/highlighter.js
+@@ -29,7 +29,7 @@ function buildHighlightInfo(tree, language) {
+         else {
+             node = stack.pop();
+             let type = node.type;
+-            if (!node.isNamed())
++            if (!node.isNamed)
+                 type = '"' + type + '"';
+             let term = null;
+             if (!language.complexTerms.includes(type)) {
+@@ -41,7 +41,7 @@ function buildHighlightInfo(tree, language) {
+                 let parent = node.parent;
+                 for (let i = 0; i < language.complexDepth && parent; i++) {
+                     let parentType = parent.type;
+-                    if (!parent.isNamed())
++                    if (!parent.isNamed)
+                         parentType = '"' + parentType + '"';
+                     desc = parentType + " > " + desc;
+                     scopes.push(desc);

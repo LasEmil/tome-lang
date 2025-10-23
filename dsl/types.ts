@@ -1,3 +1,5 @@
+import type { ParserError } from "./parser.ts";
+
 export type TokenType =
   // Keywords
   | "NODE"
@@ -244,4 +246,11 @@ export type SeverityLevel = (typeof SeverityLevels)[number];
 export type NodeNetwork = {
   nodes: Set<string>;
   links: {source: string, target: string}[]
+}
+
+
+export interface ParseResult {
+  value: AST | null;
+  errors: ParserError[];
+  valid: boolean;
 }

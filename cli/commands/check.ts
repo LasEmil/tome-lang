@@ -3,12 +3,13 @@ import { AggregateLexerError, Lexer } from "../../dsl/lexer.ts";
 import {
   AggregateParserError,
   Parser,
-  type ParseResult,
 } from "../../dsl/parser.ts";
 import { Analyzer } from "../../dsl/analyzer.ts";
-import { SeverityLevels, type SeverityLevel } from "../../dsl/types.ts";
+import { SeverityLevels, type ParseResult, type SeverityLevel } from "../../dsl/types.ts";
 import { createStyler, prettyPrintAnalysisResults } from "../format.ts";
 import fs from "node:fs/promises";
+import TSParser from "web-tree-sitter"
+import { TreeSitterAdapter } from "../../dsl/treeSitterAdapter.ts";
 
 async function readEntireFile(filePath: string) {
   const fileHandle = await fs.open(filePath, "r");
@@ -35,7 +36,14 @@ export async function check(
 
       switch (parserType) {
         case "ts": {
-          throw new Error("TypeScript parser not implemented yet");
+          await TSParser.init();
+          const parser = new TSParser();
+          const Lang = await TSParser.Language.load("tree-sitter-tome/tree-sitter-tome.wasm");
+          parser.setLanguage(Lang);
+          const tree = parser.parse(fileContent);
+          const adapter = new TreeSitterAdapter()
+          const result = adapter.convert(tree, fileContent);
+          parseResult = result;
           break;
         }
         case "tome": {

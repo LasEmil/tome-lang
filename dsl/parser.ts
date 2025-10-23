@@ -8,6 +8,7 @@ import type {
   GotoStatement,
   Interpolation,
   NodeNetwork,
+  ParseResult,
   SayStatement,
   Statement,
   Token,
@@ -43,11 +44,6 @@ export class AggregateParserError extends Error {
   }
 }
 
-export interface ParseResult {
-  value: AST | null;
-  errors: ParserError[];
-  valid: boolean;
-}
 
 export class Parser {
   private lexer: Iterator<Token>;

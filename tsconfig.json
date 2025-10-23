@@ -45,5 +45,6 @@
     "erasableSyntaxOnly": false,
     "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true
   }
 }

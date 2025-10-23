@@ -2,25 +2,18 @@ import type { SyntaxNode } from "web-tree-sitter";
 import type {
   AssignmentOperator,
   AssignmentStatement,
-  AST,
   ChoiceStatement,
   DialogueNode,
   Expression,
   GotoStatement,
   Interpolation,
+  ParseResult,
   SayStatement,
   Statement,
 } from "./types.ts";
-import { treeSitterNodeTypes } from "./constants.ts";
 
 interface Tree {
   rootNode: SyntaxNode;
-}
-
-export interface ParseResult {
-  value: AST | null;
-  errors: ParserError[];
-  valid: boolean;
 }
 
 export class ParserError extends Error {

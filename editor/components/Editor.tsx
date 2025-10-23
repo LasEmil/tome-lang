@@ -1,8 +1,10 @@
-import { text } from "../data/defaultText.ts";
-import { useCodeMirror } from "../hooks/useCodeMirror.ts";
+import { useRef } from "react";
+import { useMonaco } from "../hooks/useMonaco.ts";
 
 export default function Editor() {
-  const ref = useCodeMirror({ defaultText: text });
+  const ref = useRef<HTMLDivElement>(null);
+  const editor = useMonaco(ref);
+  console.log(editor)
 
-  return <div ref={ref} />;
+  return <div ref={ref}/>
 }

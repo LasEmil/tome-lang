@@ -1,0 +1,60 @@
+{
+	"simpleTerms": {
+		"string_literal": "string",
+		"_string_content": "string",
+		"escape_sequence": "string",
+		"interpolation": "string",
+		"interpolation_start": "punctuation",
+		"interpolation_end": "punctuation",
+
+		"number_literal": "number",
+		"boolean_literal": "constant",
+
+		"comment": "comment",
+
+		"\"node\"": "control",
+		"\"end\"": "control",
+		"\"say\"": "control",
+		"\"choice\"": "control",
+		"\"goto\"": "control",
+		"\"if\"": "control",
+
+		"\"true\"": "constant",
+		"\"false\"": "constant",
+
+		"\"=\"": "operator",
+		"\"+=\"": "operator",
+		"\"-=\"": "operator",
+		"\"*=\"": "operator",
+		"\"/=\"": "operator",
+		"\"+\"": "operator",
+		"\"-\"": "operator",
+		"\"*\"": "operator",
+		"\"/\"": "operator",
+		"\"==\"": "operator",
+		"\"!=\"": "operator",
+		"\">\"": "operator",
+		"\">=\"": "operator",
+		"\"<\"": "operator",
+		"\"<=\"": "operator",
+		"\"&&\"": "operator",
+		"\"||\"": "operator",
+		"\"!\"": "operator",
+
+		"\",\"": "punctuation",
+		"\":\"": "punctuation",
+		"\"(\"": "punctuation",
+		"\")\"": "punctuation",
+		"\"\\\"\"": "punctuation"
+	},
+
+	"complexTerms": ["identifier"],
+
+	"complexScopes": {
+		"identifier": "variable",
+		"node_definition > identifier": "type",
+		"node_reference > identifier": "type",
+		"variable > identifier": "variable",
+		"function_call > identifier": "function"
+	}
+}
