@@ -1,0 +1,36 @@
+{
+  "grammars": [
+    {
+      "name": "tome",
+      "camelcase": "Tome",
+      "scope": "source.tome",
+      "path": ".",
+      "file-types": [
+        "tome"
+      ],
+      "highlights": "queries/tome/highlights.scm"
+    }
+  ],
+  "metadata": {
+    "version": "0.0.1",
+    "license": "MIT",
+    "description": "Tome grammar for Tree-sitter",
+    "authors": [
+      {
+        "name": "Emil Laskowski",
+        "email": "emil.laskowski@pm.me"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/LasEmil/tome-lang"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": false
+  }
+}
