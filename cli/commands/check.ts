@@ -1,14 +1,15 @@
 import { command } from "cleye";
 import { AggregateLexerError, Lexer } from "../../dsl/lexer.ts";
-import {
-  AggregateParserError,
-  Parser,
-} from "../../dsl/parser.ts";
+import { AggregateParserError, Parser } from "../../dsl/parser.ts";
 import { Analyzer } from "../../dsl/analyzer.ts";
-import { SeverityLevels, type ParseResult, type SeverityLevel } from "../../dsl/types.ts";
+import {
+  SeverityLevels,
+  type ParseResult,
+  type SeverityLevel,
+} from "../../dsl/types.ts";
 import { createStyler, prettyPrintAnalysisResults } from "../format.ts";
 import fs from "node:fs/promises";
-import TSParser from "web-tree-sitter"
+import TSParser from "web-tree-sitter";
 import { TreeSitterAdapter } from "../../dsl/treeSitterAdapter.ts";
 
 async function readEntireFile(filePath: string) {
@@ -38,11 +39,14 @@ export async function check(
         case "ts": {
           await TSParser.init();
           const parser = new TSParser();
-          const Lang = await TSParser.Language.load("tree-sitter-tome/tree-sitter-tome.wasm");
+          const Lang = await TSParser.Language.load(
+            "tree-sitter-tome/tree-sitter-tome.wasm",
+          );
           parser.setLanguage(Lang);
           const tree = parser.parse(fileContent);
-          const adapter = new TreeSitterAdapter()
+          const adapter = new TreeSitterAdapter();
           const result = adapter.convert(tree, fileContent);
+          console.log(result);
           parseResult = result;
           break;
         }

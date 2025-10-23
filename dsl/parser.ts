@@ -44,7 +44,6 @@ export class AggregateParserError extends Error {
   }
 }
 
-
 export class Parser {
   private lexer: Iterator<Token>;
   private currentToken: Token;
@@ -122,20 +121,20 @@ export class Parser {
     }
   }
 
-  static getNodeNetwork(ast: AST): NodeNetwork{
+  static getNodeNetwork(ast: AST): NodeNetwork {
     const nodes = new Set<string>();
-    const links: {source: string, target: string}[] = [];
+    const links: { source: string; target: string }[] = [];
 
-    for(const node of ast.nodes){
+    for (const node of ast.nodes) {
       nodes.add(node.id);
-      for(const stmt of node.statements){
-        if(stmt.type === "Choice" || stmt.type === "Goto"){
-          links.push({source: node.id, target: stmt.target});
+      for (const stmt of node.statements) {
+        if (stmt.type === "Choice" || stmt.type === "Goto") {
+          links.push({ source: node.id, target: stmt.target });
         }
       }
     }
 
-    return {nodes, links};
+    return { nodes, links };
   }
 
   private synchronize(): void {
@@ -300,7 +299,10 @@ export class Parser {
     const text = this.consume("STRING", "Expected choice text");
     this.consume("COMMA", "Expected ',' after choice text");
 
-    const colon = this.consume("COLON", "Expected ':' before target node identifier");
+    const colon = this.consume(
+      "COLON",
+      "Expected ':' before target node identifier",
+    );
 
     const target = this.peek();
     if (target.type !== "IDENTIFIER") {
@@ -346,7 +348,7 @@ export class Parser {
   }
 
   private parseGoto(): GotoStatement {
-     this.consume("GOTO", "Expected 'goto' keyword");
+    this.consume("GOTO", "Expected 'goto' keyword");
     const colon = this.consume("COLON", "Expected ':' before node identifier");
 
     const target = this.peek();
@@ -393,6 +395,9 @@ export class Parser {
         operator: operator.value as string,
         left: expr,
         right,
+        line: operator.line,
+        column: operator.column,
+        endColumn: operator.column + (operator.value as string).length,
       };
     }
 
@@ -411,6 +416,9 @@ export class Parser {
         operator: operator.value as string,
         left: expr,
         right,
+        line: operator.line,
+        column: operator.column,
+        endColumn: operator.column + (operator.value as string).length,
       };
     }
 
@@ -438,6 +446,9 @@ export class Parser {
         right,
         left: expr,
         operator: operator.value as string,
+        line: operator.line,
+        column: operator.column,
+        endColumn: operator.column + (operator.value as string).length,
       };
     }
 
@@ -456,6 +467,9 @@ export class Parser {
         operator: operator.value as string,
         left: expr,
         right,
+        line: operator.line,
+        column: operator.column,
+        endColumn: operator.column + (operator.value as string).length,
       };
     }
 
@@ -474,6 +488,9 @@ export class Parser {
         operator: operator.value as string,
         left: expr,
         right,
+        line: operator.line,
+        column: operator.column,
+        endColumn: operator.column + (operator.value as string).length,
       };
     }
 
@@ -489,6 +506,9 @@ export class Parser {
         type: "UnaryOp",
         operator: operator.value as string,
         operand: right,
+        line: operator.line,
+        column: operator.column,
+        endColumn: operator.column + (operator.value as string).length,
       };
     }
 
@@ -509,6 +529,9 @@ export class Parser {
       return {
         type: "Literal",
         value: value,
+        line: token.line,
+        column: token.column,
+        endColumn: token.column + (token.value as string).length,
       };
     }
 
@@ -523,6 +546,7 @@ export class Parser {
         name: name.value as string,
         line: atSign.line,
         column: atSign.column,
+        endColumn: name.column + (name.value as string).length,
       };
     }
 
@@ -581,6 +605,9 @@ export class Parser {
       args,
       line: name.line,
       column: name.column,
+      endColumn:
+        this.getPreviousToken().column +
+        (this.getPreviousToken().value as string).length,
     };
   }
 

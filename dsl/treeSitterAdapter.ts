@@ -96,9 +96,8 @@ export class TreeSitterAdapter {
     if (node.type === "ERROR") {
       // Truncate error text to first line and limit length
       const firstLine = node.text.split("\n")[0].trim();
-      const truncatedText = firstLine.length > 30
-        ? firstLine.slice(0, 30) + "..."
-        : firstLine;
+      const truncatedText =
+        firstLine.length > 30 ? firstLine.slice(0, 30) + "..." : firstLine;
 
       const errorMessage = truncatedText
         ? `Syntax error: unexpected '${truncatedText}'`
@@ -222,7 +221,9 @@ export class TreeSitterAdapter {
 
     // Extract variable name (skip the @ symbol)
     const identifierNode = variableNode.namedChildren[0];
-    const variable = identifierNode ? identifierNode.text : variableNode.text.slice(1);
+    const variable = identifierNode
+      ? identifierNode.text
+      : variableNode.text.slice(1);
 
     const operator = operatorNode.text as AssignmentOperator;
     const value = this.convertExpression(expressionNode);
@@ -257,7 +258,8 @@ export class TreeSitterAdapter {
       throw new Error("Say statement missing string literal");
     }
 
-    const { text, interpolations } = this.extractStringWithInterpolations(stringNode);
+    const { text, interpolations } =
+      this.extractStringWithInterpolations(stringNode);
 
     return {
       type: "Say",
@@ -369,6 +371,9 @@ export class TreeSitterAdapter {
         operator: operatorField.text,
         left: this.convertExpression(leftNode),
         right: this.convertExpression(rightNode),
+        line: operatorField.startPosition.row + 1,
+        column: operatorField.startPosition.column + 1,
+        endColumn: rightNode.endPosition.column + 1,
       };
     }
 
@@ -379,6 +384,9 @@ export class TreeSitterAdapter {
         type: "UnaryOp",
         operator: operatorField.text,
         operand: this.convertExpression(operandNode),
+        line: operatorField.startPosition.row + 1,
+        column: operatorField.startPosition.column + 1,
+        endColumn: operandNode.endPosition.column + 1,
       };
     }
 
@@ -418,16 +426,25 @@ export class TreeSitterAdapter {
           return {
             type: "Literal",
             value: parseFloat(child.text),
+            line: child.startPosition.row + 1,
+            column: child.startPosition.column + 1,
+            endColumn: child.endPosition.column + 1,
           };
         } else if (child.type === "boolean_literal") {
           return {
             type: "Literal",
             value: child.text === "true",
+            line: child.startPosition.row + 1,
+            column: child.startPosition.column + 1,
+            endColumn: child.endPosition.column + 1,
           };
         } else if (child.type === "string_literal") {
           return {
             type: "Literal",
             value: this.extractStringContent(child),
+            line: child.startPosition.row + 1,
+            column: child.startPosition.column + 1,
+            endColumn: child.endPosition.column,
           };
         }
       }
@@ -438,6 +455,9 @@ export class TreeSitterAdapter {
       return {
         type: "Literal",
         value: parseFloat(node.text),
+        line: node.startPosition.row + 1,
+        column: node.startPosition.column + 1,
+        endColumn: node.endPosition.column + 1,
       };
     }
 
@@ -445,6 +465,9 @@ export class TreeSitterAdapter {
       return {
         type: "Literal",
         value: node.text === "true",
+        line: node.startPosition.row + 1,
+        column: node.startPosition.column + 1,
+        endColumn: node.endPosition.column + 1,
       };
     }
 
@@ -452,6 +475,9 @@ export class TreeSitterAdapter {
       return {
         type: "Literal",
         value: this.extractStringContent(node),
+        line: node.startPosition.row + 1,
+        column: node.startPosition.column + 1,
+        endColumn: node.endPosition.column + 1,
       };
     }
 
@@ -463,6 +489,9 @@ export class TreeSitterAdapter {
       return {
         type: "Variable",
         name,
+        line: node.startPosition.row + 1,
+        column: node.startPosition.column + 2, // +2 to skip the @ symbol
+        endColumn: node.endPosition.column + 1,
       };
     }
 
@@ -510,12 +539,16 @@ export class TreeSitterAdapter {
       type: "FunctionCall",
       name: nameNode.text,
       args,
+      line: nameNode.startPosition.row + 1,
+      column: nameNode.startPosition.column + 1,
+      endColumn: node.endPosition.column + 1,
     };
   }
 
-  private extractStringWithInterpolations(
-    node: SyntaxNode,
-  ): { text: string; interpolations: Interpolation[] } {
+  private extractStringWithInterpolations(node: SyntaxNode): {
+    text: string;
+    interpolations: Interpolation[];
+  } {
     let text = "";
     const interpolations: Interpolation[] = [];
     let hasContent = false;

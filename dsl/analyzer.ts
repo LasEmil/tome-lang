@@ -61,6 +61,7 @@ export class Analyzer {
         message: `Node '${node.id}' is empty and has no statements`,
         line: node.line,
         column: node.column,
+        endColumn: node.column + node.id.length,
         node: node.id,
         severity: "error",
       });
@@ -85,6 +86,7 @@ export class Analyzer {
         column: node.column,
         node: node.id,
         severity: "warning",
+        endColumn: node.column + node.id.length,
       });
     }
   }
@@ -97,6 +99,7 @@ export class Analyzer {
         message: `Duplicate node definition for '${node.id}'. It was first defined on line ${originalNode.line}.`,
         line: node.line,
         column: node.column,
+        endColumn: node.column + node.id.length,
         node: node.id,
         severity: "error",
       });
@@ -169,6 +172,7 @@ export class Analyzer {
           line: ref.line,
           column: ref.column,
           severity: "error",
+          endColumn: ref.column + ref.target.length,
         });
       }
     }
@@ -215,6 +219,7 @@ export class Analyzer {
           column: unreachableNode.column,
           node: nodeId,
           severity: "warning",
+          endColumn: unreachableNode.column + nodeId.length,
         });
       }
     }
@@ -259,6 +264,7 @@ export class Analyzer {
                 column: cycleNode.column,
                 node: cycleNodeId,
                 severity: "warning",
+                endColumn: cycleNode.column + cycleNodeId.length,
               });
               reportedCycles.add(cycleNodeId);
             }
@@ -289,6 +295,7 @@ export class Analyzer {
         line: 1,
         column: 1,
         severity: "error",
+        endColumn: 1,
       });
     }
   }
@@ -320,6 +327,8 @@ export class Analyzer {
                 message: `Function 'random' expects exactly 2 arguments, but got ${expression.args.length}.`,
                 line: expression.line ?? line,
                 column: expression.column ?? column,
+                endColumn:
+                  expression.endColumn ?? column + expression.name.length,
                 node: nodeId,
                 severity: "error",
               });
@@ -333,6 +342,8 @@ export class Analyzer {
               column: expression.column ?? column,
               node: nodeId,
               severity: "error",
+              endColumn:
+                expression.endColumn ?? column + expression.name.length,
             });
         }
         // Then, check the arguments of the function call
@@ -408,6 +419,7 @@ export class Analyzer {
     switch (expression.type) {
       case "Variable":
         if (!this.definedVariables.has(expression.name)) {
+          console.log("Undefined variable found:", expression);
           this.warnings.push({
             type: "undefined_variable",
             message: `Variable '@${expression.name}' is used but never assigned a value.`,
@@ -415,6 +427,11 @@ export class Analyzer {
             column: expression.column ?? column,
             node: nodeId,
             severity: "warning",
+            endColumn:
+              expression.endColumn ??
+              (expression.column
+                ? expression.column + expression.name.length + 1
+                : column + expression.name.length + 1),
           });
         }
         break;
@@ -463,6 +480,7 @@ export class Analyzer {
             column: statement.condition.column ?? statement.column,
             node: node.id,
             severity: "warning",
+            endColumn: statement.condition.endColumn ?? statement.column + 6,
           });
         }
       }
@@ -570,11 +588,17 @@ export class Analyzer {
 
         if (leftType === "any" || rightType === "any") return "any";
 
-        const numericOps = ["+", "-", "*", "/", ">", "<", ">=", "<="];
+        const numericOps = ["+", "-", "*", "/"];
+        const comparisonOps = [">", "<", ">=", "<="];
         const booleanOps = ["&&", "||"];
 
         let mismatch = false;
         if (numericOps.includes(expression.operator)) {
+          if (leftType !== "number" || rightType !== "number") {
+            mismatch = true;
+          }
+        } else if (comparisonOps.includes(expression.operator)) {
+          // Add this check
           if (leftType !== "number" || rightType !== "number") {
             mismatch = true;
           }
@@ -592,11 +616,13 @@ export class Analyzer {
             column: expression.column ?? context.statement.column,
             node: context.node.id,
             severity: "warning",
+            endColumn: expression.endColumn ?? context.statement.column + 1,
           });
           return "any";
         }
 
         if (numericOps.includes(expression.operator)) return "number";
+        if (comparisonOps.includes(expression.operator)) return "boolean";
         if (booleanOps.includes(expression.operator)) return "boolean";
         if (["==", "!="].includes(expression.operator)) return "boolean";
 
@@ -667,6 +693,7 @@ export class Analyzer {
           line: def.line,
           column: def.column,
           severity: "info",
+          endColumn: def.column + variableName.length,
         });
       }
     }
@@ -684,6 +711,9 @@ export class Analyzer {
             column: statement.textColumn ?? statement.column,
             node: node.id,
             severity: "warning",
+            endColumn:
+              (statement.textColumn ?? statement.column) +
+              statement.text.length,
           });
         }
         seenChoices.add(statement.text);

@@ -140,15 +140,17 @@ export type Expression =
 export interface LiteralExpression {
   type: "Literal";
   value: string | number | boolean;
-  line?: number;
-  column?: number;
+  line: number;
+  column: number;
+  endColumn: number;
 }
 
 export interface VariableExpression {
   type: "Variable";
   name: string;
-  line?: number;
-  column?: number;
+  line: number;
+  column: number;
+  endColumn: number;
 }
 
 export interface BinaryExpression {
@@ -156,22 +158,27 @@ export interface BinaryExpression {
   operator: string;
   left: Expression;
   right: Expression;
+  line: number;
+  column: number;
+  endColumn: number;
 }
 
 export interface UnaryExpression {
   type: "UnaryOp";
   operator: string;
   operand: Expression;
-  line?: number;
-  column?: number;
+  line: number;
+  column: number;
+  endColumn: number;
 }
 
 export interface FunctionCallExpression {
   type: "FunctionCall";
   name: string;
   args: Expression[];
-  line?: number;
-  column?: number;
+  line: number;
+  column: number;
+  endColumn: number;
 }
 
 export type AnalysisErrorType =
@@ -198,6 +205,7 @@ export interface AnalysisError {
   message: string;
   line: number;
   column: number;
+  endColumn: number;
   node?: string; // Which node the error is in
   severity: "error";
 }
@@ -209,6 +217,7 @@ export interface AnalysisWarning {
   column: number;
   node?: string; // Which node the warning is in
   severity: "warning";
+  endColumn: number;
 }
 
 export interface AnalysisSuggestion {
@@ -219,13 +228,14 @@ export interface AnalysisSuggestion {
   node?: string;
   severity: "info";
   fix?: string; // Optional auto-fix suggestion
+  endColumn: number;
 }
 
 export interface AnalysisResult {
   valid: boolean; // true if no errors (warnings are OK)
   errors: AnalysisError[];
   warnings: AnalysisWarning[];
-  suggestions?: AnalysisSuggestion[];
+  suggestions: AnalysisSuggestion[];
 }
 
 export interface Reference {
@@ -245,9 +255,8 @@ export type SeverityLevel = (typeof SeverityLevels)[number];
 
 export type NodeNetwork = {
   nodes: Set<string>;
-  links: {source: string, target: string}[]
-}
-
+  links: { source: string; target: string }[];
+};
 
 export interface ParseResult {
   value: AST | null;
