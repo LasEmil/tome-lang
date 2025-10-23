@@ -1,21 +1,20 @@
 import type {
-  AnalysisError,
+  AnalysisDiagnostic,
   AnalysisResult,
-  AnalysisSuggestion,
-  AnalysisWarning,
   DialogueNode,
   Expression,
   InferredType,
   Reference,
   Statement,
 } from "./types.ts";
+import { MarkerSeverity } from "./types.ts";
 
 export class Analyzer {
   private nodeDefinitions = new Map<string, DialogueNode>();
   private nodeReferences: Reference[] = [];
-  private errors: AnalysisError[] = [];
-  private warnings: AnalysisWarning[] = [];
-  private suggestions: AnalysisSuggestion[] = [];
+  private errors: AnalysisDiagnostic[] = [];
+  private warnings: AnalysisDiagnostic[] = [];
+  private suggestions: AnalysisDiagnostic[] = [];
 
   private definedVariables = new Set<string>();
   private variableTypes = new Map<string, InferredType>();
@@ -63,7 +62,7 @@ export class Analyzer {
         column: node.column,
         endColumn: node.column + node.id.length,
         node: node.id,
-        severity: "error",
+        severity: MarkerSeverity.Error,
       });
     }
   }
@@ -85,7 +84,7 @@ export class Analyzer {
         line: node.line,
         column: node.column,
         node: node.id,
-        severity: "warning",
+        severity: MarkerSeverity.Warning,
         endColumn: node.column + node.id.length,
       });
     }
@@ -101,7 +100,7 @@ export class Analyzer {
         column: node.column,
         endColumn: node.column + node.id.length,
         node: node.id,
-        severity: "error",
+        severity: MarkerSeverity.Error,
       });
     }
   }
@@ -171,7 +170,7 @@ export class Analyzer {
           message: `Node '${ref.target}' does not exist (referenced from '${ref.sourceNode}')`,
           line: ref.line,
           column: ref.column,
-          severity: "error",
+          severity: MarkerSeverity.Error,
           endColumn: ref.column + ref.target.length,
         });
       }
@@ -218,7 +217,7 @@ export class Analyzer {
           line: unreachableNode.line,
           column: unreachableNode.column,
           node: nodeId,
-          severity: "warning",
+          severity: MarkerSeverity.Warning,
           endColumn: unreachableNode.column + nodeId.length,
         });
       }
@@ -263,7 +262,7 @@ export class Analyzer {
                 line: cycleNode.line,
                 column: cycleNode.column,
                 node: cycleNodeId,
-                severity: "warning",
+                severity: MarkerSeverity.Warning,
                 endColumn: cycleNode.column + cycleNodeId.length,
               });
               reportedCycles.add(cycleNodeId);
@@ -294,7 +293,7 @@ export class Analyzer {
         // This is a file-level error, so we'll point to the beginning of the file.
         line: 1,
         column: 1,
-        severity: "error",
+        severity: MarkerSeverity.Error,
         endColumn: 1,
       });
     }
@@ -330,7 +329,7 @@ export class Analyzer {
                 endColumn:
                   expression.endColumn ?? column + expression.name.length,
                 node: nodeId,
-                severity: "error",
+                severity: MarkerSeverity.Error,
               });
             }
             break;
@@ -341,7 +340,7 @@ export class Analyzer {
               line: expression.line ?? line,
               column: expression.column ?? column,
               node: nodeId,
-              severity: "error",
+              severity: MarkerSeverity.Error,
               endColumn:
                 expression.endColumn ?? column + expression.name.length,
             });
@@ -419,14 +418,13 @@ export class Analyzer {
     switch (expression.type) {
       case "Variable":
         if (!this.definedVariables.has(expression.name)) {
-          console.log("Undefined variable found:", expression);
           this.warnings.push({
             type: "undefined_variable",
             message: `Variable '@${expression.name}' is used but never assigned a value.`,
             line: expression.line ?? line,
             column: expression.column ?? column,
             node: nodeId,
-            severity: "warning",
+            severity: MarkerSeverity.Warning,
             endColumn:
               expression.endColumn ??
               (expression.column
@@ -479,7 +477,7 @@ export class Analyzer {
             line: statement.condition.line ?? statement.line,
             column: statement.condition.column ?? statement.column,
             node: node.id,
-            severity: "warning",
+            severity: MarkerSeverity.Warning,
             endColumn: statement.condition.endColumn ?? statement.column + 6,
           });
         }
@@ -615,7 +613,7 @@ export class Analyzer {
             line: expression.line ?? context.statement.line,
             column: expression.column ?? context.statement.column,
             node: context.node.id,
-            severity: "warning",
+            severity: MarkerSeverity.Warning,
             endColumn: expression.endColumn ?? context.statement.column + 1,
           });
           return "any";
@@ -692,7 +690,7 @@ export class Analyzer {
           message: `Variable '@${variableName}' is assigned a value but is never used.`,
           line: def.line,
           column: def.column,
-          severity: "info",
+          severity: MarkerSeverity.Info,
           endColumn: def.column + variableName.length,
         });
       }
@@ -710,7 +708,7 @@ export class Analyzer {
             line: statement.textLine ?? statement.line,
             column: statement.textColumn ?? statement.column,
             node: node.id,
-            severity: "warning",
+            severity: MarkerSeverity.Warning,
             endColumn:
               (statement.textColumn ?? statement.column) +
               statement.text.length,

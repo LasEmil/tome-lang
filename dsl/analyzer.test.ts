@@ -177,11 +177,13 @@ end
 
     // Check the first duplicate error message
     const firstError = duplicateErrors.find((e) => e.node === "first");
+    if (!firstError) throw new Error("First duplicate error not found");
     assert.match(firstError?.message, /first defined on line 2/i);
     assert.strictEqual(firstError?.line, 10);
 
     // Check the second duplicate error message
     const secondError = duplicateErrors.find((e) => e.node === "second");
+    if (!secondError) throw new Error("Second duplicate error not found");
     assert.match(secondError?.message, /first defined on line 6/i);
     assert.strictEqual(secondError?.line, 18);
 

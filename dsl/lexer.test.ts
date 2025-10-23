@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert";
 import { Lexer } from "./lexer.ts";
 import { testProgram } from "../data/testProgram.ts";
-import expectedTokens from "../data/tokens.json";
+import expectedTokens from "../data/tokens.json" with { type: "json" };
 
 describe("DSL Lexer", () => {
   test("Tokenizes a simple node definition", () => {

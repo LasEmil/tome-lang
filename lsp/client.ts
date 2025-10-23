@@ -7,10 +7,10 @@ import type {
   ResponseMessage,
   NotificationMessage,
   InitializeParams,
-  // InitializeResult,
   PublishDiagnosticsParams,
   MessageType,
 } from "./types.ts";
+import { LspLogger } from "./logger.ts";
 
 type PendingRequest = {
   resolve: (value: unknown) => void;
@@ -21,18 +21,19 @@ export class LSPClient {
   private worker: Worker;
   private nextRequestId = 1;
   private pendingRequests = new Map<string | number, PendingRequest>();
-  private diagnosticsCollection: monaco.editor.IMarkerData[] = [];
   private modelUri: monaco.Uri | null = null;
 
-  constructor(workerPath: string) {
+  constructor(
+    workerPath: string,
+    public logger: LspLogger,
+  ) {
     this.worker = new Worker(workerPath, { type: "module" });
     this.worker.addEventListener(
       "message",
       this.handleWorkerMessage.bind(this),
     );
     this.worker.addEventListener("error", this.handleWorkerError.bind(this));
-
-    console.log("[LSP Client] Created");
+    this.logger.log("LSP Client created, worker started at " + workerPath);
   }
 
   private handleWorkerMessage(event: MessageEvent): void {
@@ -67,19 +68,18 @@ export class LSPClient {
         break;
 
       default:
-        console.log("[LSP Client] Received notification:", notification.method);
+        this.logger.warn(`Unhandled notification: ${notification.method}`);
     }
   }
 
   private handleDiagnostics(params: PublishDiagnosticsParams): void {
-    console.log("[LSP Client] Received diagnostics:", params);
+    this.logger.log("Received diagnostics", params);
 
-    // Convert LSP diagnostics to Monaco markers
     const markers: monaco.editor.IMarkerData[] = params.diagnostics.map(
       (diag) => {
         const marker: monaco.editor.IMarkerData = {
-          severity: this.convertSeverity(diag.severity),
-          startLineNumber: diag.range.start.line, // LSP is 0-based, Monaco is 1-based
+          severity: diag.severity,
+          startLineNumber: diag.range.start.line,
           startColumn: diag.range.start.character,
           endLineNumber: diag.range.end.line,
           endColumn: diag.range.end.character,
@@ -96,42 +96,17 @@ export class LSPClient {
       },
     );
 
-    console.log("MODEL URI", this.modelUri);
     const model = monaco.editor.getModel(this.modelUri!);
 
     if (!model) {
-      console.warn("[LSP Client] No model found for URI:", params.uri);
+      this.logger.error(`No model found for URI: ${params.uri}`);
       return;
     }
-    const allModels = monaco.editor.getModels();
-    console.log(
-      "[LSP Client] All models:",
-      allModels.map((m) => m.uri.toString()),
-    );
-    // Set markers on the model
-    console.log("[LSP Client] Setting markers on model:", model.uri.toString());
-    console.log("[LSP Client] Markers:", markers);
     monaco.editor.setModelMarkers(model, "tome-lsp", markers);
-    console.log("[LSP Client] First marker:", markers[0]);
-  }
-
-  private convertSeverity(severity?: number): monaco.MarkerSeverity {
-    switch (severity) {
-      case 1:
-        return monaco.MarkerSeverity.Error;
-      case 2:
-        return monaco.MarkerSeverity.Warning;
-      case 3:
-        return monaco.MarkerSeverity.Info;
-      case 4:
-        return monaco.MarkerSeverity.Hint;
-      default:
-        return monaco.MarkerSeverity.Error;
-    }
   }
 
   private handleWorkerError(error: ErrorEvent): void {
-    console.error("[LSP Client] Worker error:", error);
+    this.logger.error(`Worker error: ${error.message}`, error);
   }
 
   private sendRequest(method: MessageType, params?: unknown): Promise<unknown> {
@@ -173,7 +148,7 @@ export class LSPClient {
     const result = await this.sendRequest("initialize", params);
     this.sendNotification("initialized");
 
-    console.log("[LSP Client] Initialized with capabilities:", result);
+    this.logger.log("Initialized", result);
     return result;
   }
 
@@ -184,7 +159,7 @@ export class LSPClient {
     text: string,
   ): void {
     this.modelUri = monaco.Uri.parse(uri);
-    console.log("[LSP Client] didOpenTextDocument:", uri, this.modelUri);
+    this.logger.log("didOpenTextDocument", { uri, languageId, version });
 
     this.sendNotification("textDocument/didOpen", {
       textDocument: {
@@ -213,7 +188,7 @@ export class LSPClient {
   async shutdown(): Promise<void> {
     await this.sendRequest("shutdown");
     this.worker.terminate();
-    console.log("[LSP Client] Shutdown complete");
+    this.logger.log("Shutdown complete");
   }
 
   // Helper to connect to Monaco editor
@@ -252,7 +227,8 @@ export async function setupLSPForMonaco(
   uri: string = "file:///main.custom",
   languageId: string = "custom-lang",
 ): Promise<{ client: LSPClient; cleanup: () => void }> {
-  const client = new LSPClient(workerPath);
+  const logger = new LspLogger("client", true);
+  const client = new LSPClient(workerPath, logger);
 
   // Initialize the LSP
   await client.initialize();

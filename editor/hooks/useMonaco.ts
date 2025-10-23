@@ -4,19 +4,14 @@ import { text } from "../data/defaultText.ts";
 import Parser from "web-tree-sitter";
 import treeSitterWasm from "web-tree-sitter/tree-sitter.wasm?url";
 import tomeWasm from "../../tree-sitter-tome/tree-sitter-tome.wasm?url";
-import {
-  Theme,
-  Language,
-  MonacoTreeSitter,
-  type ThemeConfig,
-} from "monaco-tree-sitter";
+import { Theme, Language, MonacoTreeSitter } from "monaco-tree-sitter";
 import tomeGrammar from "../data/tome.json" with { type: "json" };
 import * as Monaco from "monaco-editor";
 import { setupLSPForMonaco } from "../../lsp/client.ts";
 import TomeLSPWorkerURL from "../../lsp/worker.ts?url";
 import { theme } from "../lib/theme.ts";
 
-Theme.load(theme as ThemeConfig);
+Theme.load(theme);
 async function initializeLSP(editor: monaco.editor.IStandaloneCodeEditor) {
   try {
     const { client, cleanup } = await setupLSPForMonaco(
@@ -42,7 +37,6 @@ async function initializeLSP(editor: monaco.editor.IStandaloneCodeEditor) {
 export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   async function loadEditor(ref: RefObject<HTMLDivElement | null>) {
-
     if (!ref.current) return;
     await Parser.init({
       locateFile() {
@@ -54,7 +48,9 @@ export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
     await language.init(tomeWasm, Parser);
 
     const models = monaco.editor.getModels();
-    const existingModel = models.find((model) => model.uri.toString() === "file://test.tome/");
+    const existingModel = models.find(
+      (model) => model.uri.toString() === "file://test.tome/",
+    );
     const editor = monaco.editor.create(ref.current, {
       value: text,
       language: "tome",
@@ -62,11 +58,13 @@ export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
       wordWrap: "on",
       minimap: { enabled: false },
       theme: "cattppuccin-mocha",
-      model: existingModel ?? monaco.editor.createModel(
-        text,
-        "tome",
-        monaco.Uri.parse("file://test.tome"),
-      ),
+      model:
+        existingModel ??
+        monaco.editor.createModel(
+          text,
+          "tome",
+          monaco.Uri.parse("file://test.tome"),
+        ),
     });
 
     await initializeLSP(editor);
@@ -79,7 +77,6 @@ export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
   useEffect(() => {
     loadEditor(ref).then((editor) => {
       if (editor) {
-        
         editorRef.current = editor;
       }
     });

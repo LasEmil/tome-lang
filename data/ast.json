@@ -19,7 +19,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "gold"
+                "name": "gold",
+                "line": 4,
+                "column": 19,
+                "endColumn": 24
               },
               "start": 9,
               "end": 9
@@ -27,7 +30,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "health"
+                "name": "health",
+                "line": 4,
+                "column": 37,
+                "endColumn": 44
               },
               "start": 25,
               "end": 25
@@ -42,7 +48,10 @@
           "operator": "=",
           "value": {
             "type": "Literal",
-            "value": true
+            "value": true,
+            "line": 6,
+            "column": 20,
+            "endColumn": 24
           },
           "line": 6,
           "column": 4
@@ -56,12 +65,21 @@
             "operator": "+",
             "left": {
               "type": "Variable",
-              "name": "visit_count"
+              "name": "visit_count",
+              "line": 7,
+              "column": 18,
+              "endColumn": 30
             },
             "right": {
               "type": "Literal",
-              "value": 1
-            }
+              "value": 1,
+              "line": 7,
+              "column": 33,
+              "endColumn": null
+            },
+            "line": 7,
+            "column": 31,
+            "endColumn": 32
           },
           "line": 7,
           "column": 4
@@ -71,25 +89,38 @@
           "text": "Go to shop",
           "target": "shop",
           "line": 9,
-          "column": 11
+          "column": 24,
+          "textLine": 9,
+          "textColumn": 11
         },
         {
           "type": "Choice",
           "text": "Go to forest",
           "target": "forest",
           "line": 10,
-          "column": 11,
+          "column": 26,
+          "textLine": 10,
+          "textColumn": 11,
           "condition": {
             "type": "BinaryOp",
             "right": {
               "type": "Literal",
-              "value": 5
+              "value": 5,
+              "line": 10,
+              "column": 49,
+              "endColumn": null
             },
             "left": {
               "type": "Variable",
-              "name": "level"
+              "name": "level",
+              "line": 10,
+              "column": 39,
+              "endColumn": 45
             },
-            "operator": ">="
+            "operator": ">=",
+            "line": 10,
+            "column": 46,
+            "endColumn": 48
           }
         },
         {
@@ -97,7 +128,9 @@
           "text": "Rest at inn",
           "target": "inn",
           "line": 11,
-          "column": 11,
+          "column": 25,
+          "textLine": 11,
+          "textColumn": 11,
           "condition": {
             "type": "BinaryOp",
             "operator": "&&",
@@ -105,26 +138,47 @@
               "type": "BinaryOp",
               "right": {
                 "type": "Literal",
-                "value": 20
+                "value": 20,
+                "line": 11,
+                "column": 44,
+                "endColumn": null
               },
               "left": {
                 "type": "Variable",
-                "name": "gold"
+                "name": "gold",
+                "line": 11,
+                "column": 35,
+                "endColumn": 40
               },
-              "operator": ">="
+              "operator": ">=",
+              "line": 11,
+              "column": 41,
+              "endColumn": 43
             },
             "right": {
               "type": "BinaryOp",
               "right": {
                 "type": "Literal",
-                "value": 100
+                "value": 100,
+                "line": 11,
+                "column": 60,
+                "endColumn": null
               },
               "left": {
                 "type": "Variable",
-                "name": "health"
+                "name": "health",
+                "line": 11,
+                "column": 50,
+                "endColumn": 57
               },
-              "operator": "<"
-            }
+              "operator": "<",
+              "line": 11,
+              "column": 58,
+              "endColumn": 59
+            },
+            "line": 11,
+            "column": 47,
+            "endColumn": 49
           }
         },
         {
@@ -132,14 +186,22 @@
           "text": "Check inventory",
           "target": "inventory",
           "line": 12,
-          "column": 11,
+          "column": 29,
+          "textLine": 12,
+          "textColumn": 11,
           "condition": {
             "type": "UnaryOp",
             "operator": "!",
             "operand": {
               "type": "Variable",
-              "name": "inventory_empty"
-            }
+              "name": "inventory_empty",
+              "line": 12,
+              "column": 46,
+              "endColumn": 62
+            },
+            "line": 12,
+            "column": 45,
+            "endColumn": 46
           }
         },
         {
@@ -147,7 +209,9 @@
           "text": "Quit",
           "target": "ending",
           "line": 13,
-          "column": 11
+          "column": 18,
+          "textLine": 13,
+          "textColumn": 11
         }
       ],
       "line": 2,
@@ -176,18 +240,29 @@
           "text": "Buy potion",
           "target": "buy_potion",
           "line": 20,
-          "column": 11,
+          "column": 24,
+          "textLine": 20,
+          "textColumn": 11,
           "condition": {
             "type": "BinaryOp",
             "right": {
               "type": "Literal",
-              "value": 50
+              "value": 50,
+              "line": 20,
+              "column": 50,
+              "endColumn": null
             },
             "left": {
               "type": "Variable",
-              "name": "gold"
+              "name": "gold",
+              "line": 20,
+              "column": 41,
+              "endColumn": 46
             },
-            "operator": ">="
+            "operator": ">=",
+            "line": 20,
+            "column": 47,
+            "endColumn": 49
           }
         },
         {
@@ -195,18 +270,29 @@
           "text": "Sell items",
           "target": "sell_items",
           "line": 21,
-          "column": 11,
+          "column": 24,
+          "textLine": 21,
+          "textColumn": 11,
           "condition": {
             "type": "BinaryOp",
             "right": {
               "type": "Literal",
-              "value": true
+              "value": true,
+              "line": 21,
+              "column": 55,
+              "endColumn": 59
             },
             "left": {
               "type": "Variable",
-              "name": "has_items"
+              "name": "has_items",
+              "line": 21,
+              "column": 41,
+              "endColumn": 51
             },
-            "operator": "=="
+            "operator": "==",
+            "line": 21,
+            "column": 52,
+            "endColumn": 54
           }
         },
         {
@@ -214,7 +300,9 @@
           "text": "Leave",
           "target": "start",
           "line": 22,
-          "column": 11
+          "column": 19,
+          "textLine": 22,
+          "textColumn": 11
         }
       ],
       "line": 16,
@@ -237,7 +325,10 @@
           "operator": "-=",
           "value": {
             "type": "Literal",
-            "value": 50
+            "value": 50,
+            "line": 29,
+            "column": 12,
+            "endColumn": null
           },
           "line": 29,
           "column": 4
@@ -248,7 +339,10 @@
           "operator": "+=",
           "value": {
             "type": "Literal",
-            "value": 30
+            "value": 30,
+            "line": 30,
+            "column": 14,
+            "endColumn": null
           },
           "line": 30,
           "column": 4
@@ -262,12 +356,21 @@
             "operator": "+",
             "left": {
               "type": "Variable",
-              "name": "potions"
+              "name": "potions",
+              "line": 31,
+              "column": 14,
+              "endColumn": 22
             },
             "right": {
               "type": "Literal",
-              "value": 1
-            }
+              "value": 1,
+              "line": 31,
+              "column": 25,
+              "endColumn": null
+            },
+            "line": 31,
+            "column": 23,
+            "endColumn": 24
           },
           "line": 31,
           "column": 4
@@ -286,7 +389,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "health"
+                "name": "health",
+                "line": 34,
+                "column": 29,
+                "endColumn": 36
               },
               "start": 19,
               "end": 19
@@ -299,7 +405,7 @@
           "type": "Goto",
           "target": "shop",
           "line": 36,
-          "column": 3
+          "column": 8
         }
       ],
       "line": 28,
@@ -319,13 +425,22 @@
             "args": [
               {
                 "type": "Literal",
-                "value": 10
+                "value": 10,
+                "line": 40,
+                "column": 19,
+                "endColumn": null
               },
               {
                 "type": "Literal",
-                "value": 50
+                "value": 50,
+                "line": 40,
+                "column": 23,
+                "endColumn": null
               }
-            ]
+            ],
+            "line": 40,
+            "column": 12,
+            "endColumn": 26
           },
           "line": 40,
           "column": 4
@@ -336,7 +451,10 @@
           "operator": "=",
           "value": {
             "type": "Literal",
-            "value": false
+            "value": false,
+            "line": 41,
+            "column": 16,
+            "endColumn": 21
           },
           "line": 41,
           "column": 4
@@ -348,7 +466,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "gold"
+                "name": "gold",
+                "line": 43,
+                "column": 34,
+                "endColumn": 39
               },
               "start": 24,
               "end": 24
@@ -362,14 +483,18 @@
           "text": "Continue shopping",
           "target": "shop",
           "line": 45,
-          "column": 11
+          "column": 31,
+          "textLine": 45,
+          "textColumn": 11
         },
         {
           "type": "Choice",
           "text": "Leave",
           "target": "start",
           "line": 46,
-          "column": 11
+          "column": 19,
+          "textLine": 46,
+          "textColumn": 11
         }
       ],
       "line": 39,
@@ -396,13 +521,22 @@
             "args": [
               {
                 "type": "Literal",
-                "value": 20
+                "value": 20,
+                "line": 52,
+                "column": 22,
+                "endColumn": null
               },
               {
                 "type": "Literal",
-                "value": 50
+                "value": 50,
+                "line": 52,
+                "column": 26,
+                "endColumn": null
               }
-            ]
+            ],
+            "line": 52,
+            "column": 15,
+            "endColumn": 29
           },
           "line": 52,
           "column": 4
@@ -416,12 +550,21 @@
             "operator": "*",
             "left": {
               "type": "Variable",
-              "name": "strength"
+              "name": "strength",
+              "line": 53,
+              "column": 13,
+              "endColumn": 22
             },
             "right": {
               "type": "Literal",
-              "value": 2
-            }
+              "value": 2,
+              "line": 53,
+              "column": 25,
+              "endColumn": null
+            },
+            "line": 53,
+            "column": 23,
+            "endColumn": 24
           },
           "line": 53,
           "column": 4
@@ -431,18 +574,29 @@
           "text": "Attack",
           "target": "battle",
           "line": 55,
-          "column": 11,
+          "column": 20,
+          "textLine": 55,
+          "textColumn": 11,
           "condition": {
             "type": "BinaryOp",
             "right": {
               "type": "Literal",
-              "value": 0
+              "value": 0,
+              "line": 55,
+              "column": 45,
+              "endColumn": null
             },
             "left": {
               "type": "Variable",
-              "name": "enemy_hp"
+              "name": "enemy_hp",
+              "line": 55,
+              "column": 33,
+              "endColumn": 42
             },
-            "operator": ">"
+            "operator": ">",
+            "line": 55,
+            "column": 43,
+            "endColumn": 44
           }
         },
         {
@@ -450,7 +604,9 @@
           "text": "Run away",
           "target": "start",
           "line": 56,
-          "column": 11
+          "column": 22,
+          "textLine": 56,
+          "textColumn": 11
         }
       ],
       "line": 49,
@@ -469,12 +625,21 @@
             "operator": "-",
             "left": {
               "type": "Variable",
-              "name": "enemy_hp"
+              "name": "enemy_hp",
+              "line": 60,
+              "column": 15,
+              "endColumn": 24
             },
             "right": {
               "type": "Variable",
-              "name": "damage"
-            }
+              "name": "damage",
+              "line": 60,
+              "column": 27,
+              "endColumn": 34
+            },
+            "line": 60,
+            "column": 25,
+            "endColumn": 26
           },
           "line": 60,
           "column": 4
@@ -488,7 +653,10 @@
             "operator": "-",
             "left": {
               "type": "Variable",
-              "name": "health"
+              "name": "health",
+              "line": 61,
+              "column": 13,
+              "endColumn": 20
             },
             "right": {
               "type": "FunctionCall",
@@ -496,14 +664,26 @@
               "args": [
                 {
                   "type": "Literal",
-                  "value": 5
+                  "value": 5,
+                  "line": 61,
+                  "column": 30,
+                  "endColumn": null
                 },
                 {
                   "type": "Literal",
-                  "value": 15
+                  "value": 15,
+                  "line": 61,
+                  "column": 33,
+                  "endColumn": null
                 }
-              ]
-            }
+              ],
+              "line": 61,
+              "column": 23,
+              "endColumn": 36
+            },
+            "line": 61,
+            "column": 21,
+            "endColumn": 22
           },
           "line": 61,
           "column": 4
@@ -515,7 +695,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "damage"
+                "name": "damage",
+                "line": 63,
+                "column": 19,
+                "endColumn": 26
               },
               "start": 9,
               "end": 9
@@ -531,7 +714,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "enemy_hp"
+                "name": "enemy_hp",
+                "line": 64,
+                "column": 20,
+                "endColumn": 29
               },
               "start": 10,
               "end": 10
@@ -545,7 +731,9 @@
           "text": "Continue fighting",
           "target": "battle",
           "line": 66,
-          "column": 11,
+          "column": 31,
+          "textLine": 66,
+          "textColumn": 11,
           "condition": {
             "type": "BinaryOp",
             "operator": "&&",
@@ -553,26 +741,47 @@
               "type": "BinaryOp",
               "right": {
                 "type": "Literal",
-                "value": 0
+                "value": 0,
+                "line": 66,
+                "column": 56,
+                "endColumn": null
               },
               "left": {
                 "type": "Variable",
-                "name": "enemy_hp"
+                "name": "enemy_hp",
+                "line": 66,
+                "column": 44,
+                "endColumn": 53
               },
-              "operator": ">"
+              "operator": ">",
+              "line": 66,
+              "column": 54,
+              "endColumn": 55
             },
             "right": {
               "type": "BinaryOp",
               "right": {
                 "type": "Literal",
-                "value": 0
+                "value": 0,
+                "line": 66,
+                "column": 71,
+                "endColumn": null
               },
               "left": {
                 "type": "Variable",
-                "name": "health"
+                "name": "health",
+                "line": 66,
+                "column": 61,
+                "endColumn": 68
               },
-              "operator": ">"
-            }
+              "operator": ">",
+              "line": 66,
+              "column": 69,
+              "endColumn": 70
+            },
+            "line": 66,
+            "column": 58,
+            "endColumn": 60
           }
         },
         {
@@ -580,18 +789,29 @@
           "text": "Victory!",
           "target": "victory",
           "line": 67,
-          "column": 11,
+          "column": 22,
+          "textLine": 67,
+          "textColumn": 11,
           "condition": {
             "type": "BinaryOp",
             "right": {
               "type": "Literal",
-              "value": 0
+              "value": 0,
+              "line": 67,
+              "column": 49,
+              "endColumn": null
             },
             "left": {
               "type": "Variable",
-              "name": "enemy_hp"
+              "name": "enemy_hp",
+              "line": 67,
+              "column": 36,
+              "endColumn": 45
             },
-            "operator": "<="
+            "operator": "<=",
+            "line": 67,
+            "column": 46,
+            "endColumn": 48
           }
         },
         {
@@ -599,18 +819,29 @@
           "text": "Defeat...",
           "target": "defeat",
           "line": 68,
-          "column": 11,
+          "column": 23,
+          "textLine": 68,
+          "textColumn": 11,
           "condition": {
             "type": "BinaryOp",
             "right": {
               "type": "Literal",
-              "value": 0
+              "value": 0,
+              "line": 68,
+              "column": 47,
+              "endColumn": null
             },
             "left": {
               "type": "Variable",
-              "name": "health"
+              "name": "health",
+              "line": 68,
+              "column": 36,
+              "endColumn": 43
             },
-            "operator": "<="
+            "operator": "<=",
+            "line": 68,
+            "column": 44,
+            "endColumn": 46
           }
         }
       ],
@@ -630,7 +861,10 @@
             "operator": "+",
             "left": {
               "type": "Variable",
-              "name": "gold"
+              "name": "gold",
+              "line": 72,
+              "column": 11,
+              "endColumn": 16
             },
             "right": {
               "type": "FunctionCall",
@@ -638,14 +872,26 @@
               "args": [
                 {
                   "type": "Literal",
-                  "value": 50
+                  "value": 50,
+                  "line": 72,
+                  "column": 26,
+                  "endColumn": null
                 },
                 {
                   "type": "Literal",
-                  "value": 100
+                  "value": 100,
+                  "line": 72,
+                  "column": 30,
+                  "endColumn": null
                 }
-              ]
-            }
+              ],
+              "line": 72,
+              "column": 19,
+              "endColumn": 34
+            },
+            "line": 72,
+            "column": 17,
+            "endColumn": 18
           },
           "line": 72,
           "column": 4
@@ -656,7 +902,10 @@
           "operator": "+=",
           "value": {
             "type": "Literal",
-            "value": 100
+            "value": 100,
+            "line": 73,
+            "column": 10,
+            "endColumn": null
           },
           "line": 73,
           "column": 4
@@ -670,12 +919,21 @@
             "operator": "+",
             "left": {
               "type": "Variable",
-              "name": "level"
+              "name": "level",
+              "line": 74,
+              "column": 12,
+              "endColumn": 18
             },
             "right": {
               "type": "Literal",
-              "value": 1
-            }
+              "value": 1,
+              "line": 74,
+              "column": 21,
+              "endColumn": null
+            },
+            "line": 74,
+            "column": 19,
+            "endColumn": 20
           },
           "line": 74,
           "column": 4
@@ -694,7 +952,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "gold"
+                "name": "gold",
+                "line": 77,
+                "column": 17,
+                "endColumn": 22
               },
               "start": 7,
               "end": 7
@@ -707,7 +968,7 @@
           "type": "Goto",
           "target": "start",
           "line": 79,
-          "column": 3
+          "column": 8
         }
       ],
       "line": 71,
@@ -730,7 +991,10 @@
           "operator": "=",
           "value": {
             "type": "Literal",
-            "value": 100
+            "value": 100,
+            "line": 84,
+            "column": 13,
+            "endColumn": null
           },
           "line": 84,
           "column": 4
@@ -744,12 +1008,21 @@
             "operator": "/",
             "left": {
               "type": "Variable",
-              "name": "gold"
+              "name": "gold",
+              "line": 85,
+              "column": 11,
+              "endColumn": 16
             },
             "right": {
               "type": "Literal",
-              "value": 2
-            }
+              "value": 2,
+              "line": 85,
+              "column": 19,
+              "endColumn": null
+            },
+            "line": 85,
+            "column": 17,
+            "endColumn": 18
           },
           "line": 85,
           "column": 4
@@ -758,7 +1031,7 @@
           "type": "Goto",
           "target": "start",
           "line": 87,
-          "column": 3
+          "column": 8
         }
       ],
       "line": 82,
@@ -774,7 +1047,10 @@
           "operator": "-=",
           "value": {
             "type": "Literal",
-            "value": 20
+            "value": 20,
+            "line": 91,
+            "column": 12,
+            "endColumn": null
           },
           "line": 91,
           "column": 4
@@ -785,7 +1061,10 @@
           "operator": "=",
           "value": {
             "type": "Literal",
-            "value": 100
+            "value": 100,
+            "line": 92,
+            "column": 13,
+            "endColumn": null
           },
           "line": 92,
           "column": 4
@@ -808,7 +1087,7 @@
           "type": "Goto",
           "target": "start",
           "line": 97,
-          "column": 3
+          "column": 8
         }
       ],
       "line": 90,
@@ -832,7 +1111,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "gold"
+                "name": "gold",
+                "line": 102,
+                "column": 16,
+                "endColumn": 21
               },
               "start": 6,
               "end": 6
@@ -848,7 +1130,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "potions"
+                "name": "potions",
+                "line": 103,
+                "column": 19,
+                "endColumn": 27
               },
               "start": 9,
               "end": 9
@@ -864,7 +1149,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "level"
+                "name": "level",
+                "line": 104,
+                "column": 17,
+                "endColumn": 23
               },
               "start": 7,
               "end": 7
@@ -878,7 +1166,9 @@
           "text": "Back",
           "target": "start",
           "line": 106,
-          "column": 11
+          "column": 18,
+          "textLine": 106,
+          "textColumn": 11
         }
       ],
       "line": 100,
@@ -909,7 +1199,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "gold"
+                "name": "gold",
+                "line": 112,
+                "column": 16,
+                "endColumn": 21
               },
               "start": 6,
               "end": 6
@@ -917,7 +1210,10 @@
             {
               "expression": {
                 "type": "Variable",
-                "name": "level"
+                "name": "level",
+                "line": 112,
+                "column": 33,
+                "endColumn": 39
               },
               "start": 21,
               "end": 21

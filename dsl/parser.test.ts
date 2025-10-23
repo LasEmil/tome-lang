@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { Parser } from "./parser.ts";
 import { Lexer } from "./lexer.ts";
 import { testProgram } from "../data/testProgram.ts";
-import expectedAST from "../data/ast.json";
+import expectedAST from "../data/ast.json" with { type: "json" };
 
 describe("DSL Parser", () => {
   test("Parses complex dialogue script", () => {

@@ -200,42 +200,29 @@ export type AnalysisWarningType =
   | "suspicious_condition"
   | "identical_choice";
 
-export interface AnalysisError {
-  type: AnalysisErrorType;
+export enum MarkerSeverity {
+  Hint = 1,
+  Info = 2,
+  Warning = 4,
+  Error = 8,
+}
+
+export interface AnalysisDiagnostic {
+  type: AnalysisErrorType | AnalysisWarningType | string;
   message: string;
   line: number;
   column: number;
   endColumn: number;
-  node?: string; // Which node the error is in
-  severity: "error";
-}
-
-export interface AnalysisWarning {
-  type: AnalysisWarningType;
-  message: string;
-  line: number;
-  column: number;
-  node?: string; // Which node the warning is in
-  severity: "warning";
-  endColumn: number;
-}
-
-export interface AnalysisSuggestion {
-  type: string;
-  message: string;
-  line: number;
-  column: number;
   node?: string;
-  severity: "info";
-  fix?: string; // Optional auto-fix suggestion
-  endColumn: number;
+  severity: MarkerSeverity;
+  fix?: string;
 }
 
 export interface AnalysisResult {
-  valid: boolean; // true if no errors (warnings are OK)
-  errors: AnalysisError[];
-  warnings: AnalysisWarning[];
-  suggestions: AnalysisSuggestion[];
+  valid: boolean;
+  errors: AnalysisDiagnostic[];
+  warnings: AnalysisDiagnostic[];
+  suggestions: AnalysisDiagnostic[];
 }
 
 export interface Reference {
@@ -246,12 +233,7 @@ export interface Reference {
   sourceNode: string;
 }
 
-export type Diagnostic = AnalysisError | AnalysisWarning | AnalysisSuggestion;
-
 export type InferredType = "number" | "string" | "boolean" | "any";
-
-export const SeverityLevels = ["error", "warning", "info"] as const;
-export type SeverityLevel = (typeof SeverityLevels)[number];
 
 export type NodeNetwork = {
   nodes: Set<string>;

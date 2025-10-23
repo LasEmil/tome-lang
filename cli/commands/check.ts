@@ -2,11 +2,7 @@ import { command } from "cleye";
 import { AggregateLexerError, Lexer } from "../../dsl/lexer.ts";
 import { AggregateParserError, Parser } from "../../dsl/parser.ts";
 import { Analyzer } from "../../dsl/analyzer.ts";
-import {
-  SeverityLevels,
-  type ParseResult,
-  type SeverityLevel,
-} from "../../dsl/types.ts";
+import { type ParseResult } from "../../dsl/types.ts";
 import { createStyler, prettyPrintAnalysisResults } from "../format.ts";
 import fs from "node:fs/promises";
 import TSParser from "web-tree-sitter";
@@ -120,12 +116,7 @@ export async function check(
       if (!analysisResult.valid) {
         switch (format) {
           case "text":
-            prettyPrintAnalysisResults(
-              analysisResult,
-              filePath,
-              style,
-              level as SeverityLevel,
-            );
+            prettyPrintAnalysisResults(analysisResult, filePath, style, level);
             break;
           case "json":
             console.log(
@@ -182,14 +173,6 @@ export async function check(
   }
 }
 
-function Severity(level: SeverityLevel): SeverityLevel {
-  if (!SeverityLevels.includes(level)) {
-    throw new Error(`Invalid level: "${level}"`);
-  }
-
-  return level;
-}
-
 function ParserType(parser: "tome" | "ts"): "tome" | "ts" {
   if (parser !== "tome" && parser !== "ts") {
     throw new Error(`Invalid parser type: "${parser}"`);
@@ -211,7 +194,7 @@ export const checkCommand = command(
         default: "text",
       },
       level: {
-        type: Severity,
+        type: String,
         alias: "l",
         description:
           "Minimum diagnostic level: error (default), warning, or info",

@@ -1,5 +1,6 @@
 import { flavors } from "@catppuccin/palette";
 import { monaco } from "./monaco.ts";
+import type { ThemeConfig } from "monaco-tree-sitter";
 
 const flavor = flavors.mocha;
 
@@ -158,9 +159,12 @@ const baseTheme = {
     "titleBar.activeBackground": flavor.colors.mantle.hex,
     "titleBar.inactiveBackground": flavor.colors.mantle.hex,
   },
-} as const;
-export const cattppuccinMocha = monaco.editor.defineTheme("cattppuccin-mocha", baseTheme);
-export const theme =  {
+} as monaco.editor.IStandaloneThemeData;
+export const cattppuccinMocha = monaco.editor.defineTheme(
+  "cattppuccin-mocha",
+  baseTheme,
+);
+export const theme = {
   monacoTreeSitter: {
     type: flavor.colors.yellow.hex,
     scope: flavor.colors.text.hex,
@@ -176,5 +180,5 @@ export const theme =  {
     modifier: flavor.colors.mauve.hex,
     punctuation: flavor.colors.overlay2.hex,
   },
-  base: baseTheme
-};
+  base: baseTheme,
+} as unknown as ThemeConfig;

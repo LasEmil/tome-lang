@@ -94,10 +94,10 @@ export class TreeSitterAdapter {
 
   private collectTreeSitterErrors(node: SyntaxNode): void {
     if (node.type === "ERROR") {
-      // Truncate error text to first line and limit length
-      const firstLine = node.text.split("\n")[0].trim();
+      const firstLine = node.text.split("\n")[0]?.trim();
+      if (!firstLine) return;
       const truncatedText =
-        firstLine.length > 30 ? firstLine.slice(0, 30) + "..." : firstLine;
+        firstLine?.length > 30 ? firstLine?.slice(0, 30) + "..." : firstLine;
 
       const errorMessage = truncatedText
         ? `Syntax error: unexpected '${truncatedText}'`
@@ -108,7 +108,7 @@ export class TreeSitterAdapter {
         node.startPosition.row + 1,
         node.startPosition.column + 1,
       );
-      return; // Don't recurse into ERROR node children
+      return;
     }
 
     if (node.isMissing) {

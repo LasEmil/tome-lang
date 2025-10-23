@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { NodeNetwork } from "../../dsl/types.ts";
-import type { Diagnostic } from "@codemirror/lint";
 
 type Panel = {
   id: string;
@@ -50,19 +49,4 @@ export const useNodeNetworkStore = create<NodeNetworkStore>((set) => ({
   loading: true,
   setNetwork: (network: NodeNetwork) => set({ network, loading: false }),
   setLoading: (loading: boolean) => set({ loading }),
-}));
-
-type DiagnosticStoreState = {
-  diagnostics: Diagnostic[];
-  text: string;
-};
-type DiagnosticStoreActions = {
-  setDiagnostics: (diagnostics: Diagnostic[], text: string) => void;
-};
-type DiagnosticStore = DiagnosticStoreState & DiagnosticStoreActions;
-export const useDiagnosticStore = create<DiagnosticStore>((set) => ({
-  diagnostics: [],
-  text: "",
-  setDiagnostics: (diagnostics: Diagnostic[], text: string) =>
-    set({ diagnostics, text }),
 }));

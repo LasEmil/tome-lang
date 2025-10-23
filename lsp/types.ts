@@ -1,6 +1,8 @@
 // types/lsp-protocol.ts
 // Simplified LSP protocol types for your custom language
 
+import type { MarkerSeverity } from "../dsl/types.ts";
+
 export type MessageType =
   | "initialize"
   | "initialized"
@@ -42,16 +44,9 @@ export interface TextDocumentContentChangeEvent {
   text: string;
 }
 
-export enum DiagnosticSeverity {
-  Error = 1,
-  Warning = 2,
-  Information = 3,
-  Hint = 4,
-}
-
 export interface Diagnostic {
   range: Range;
-  severity?: DiagnosticSeverity;
+  severity: MarkerSeverity;
   code?: string | number;
   source?: string;
   message: string;

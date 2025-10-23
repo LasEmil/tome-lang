@@ -11,7 +11,6 @@ import {
   type DidChangeTextDocumentParams,
   type PublishDiagnosticsParams,
   type Diagnostic,
-  DiagnosticSeverity,
   type MessageType,
 } from "./types.ts";
 
@@ -20,7 +19,8 @@ import tomeWasm from "../tree-sitter-tome/tree-sitter-tome.wasm?url";
 import Parser from "web-tree-sitter";
 import { TreeSitterAdapter } from "../dsl/treeSitterAdapter.ts";
 import { Analyzer } from "../dsl/analyzer.ts";
-// Document storage
+import { LspLogger } from "./logger.ts";
+
 interface DocumentState {
   uri: string;
   version: number;
@@ -34,12 +34,12 @@ class LSPServer {
   private adapter: TreeSitterAdapter | null = null;
   private initialized = false;
 
-  constructor() {
-    console.log("[LSP Worker] Server created");
+  constructor(public logger: LspLogger) {
+    this.logger.log("Created");
   }
 
   async initialize(params: InitializeParams): Promise<InitializeResult> {
-    console.log("[LSP Worker] Initializing...", params);
+    this.logger.log("Initializing LSP Server", params);
     await Parser.init({
       locateFile() {
         return treeSitterWasm;
@@ -52,13 +52,10 @@ class LSPServer {
 
     this.initialized = true;
 
-    // TODO: Initialize your tree-sitter parser here
-    // await initTreeSitter();
-
     return {
       capabilities: {
-        textDocumentSync: 1, // Full sync for now, can optimize to incremental later
-        completionProvider: false, // Enable when you implement
+        textDocumentSync: 1,
+        completionProvider: false,
         hoverProvider: false,
       },
     };
@@ -66,7 +63,7 @@ class LSPServer {
 
   handleDidOpen(params: DidOpenTextDocumentParams): void {
     const { textDocument } = params;
-    console.log("[LSP Worker] Document opened:", textDocument.uri);
+    this.logger.log("Did open document", textDocument.uri);
 
     this.documents.set(textDocument.uri, {
       uri: textDocument.uri,
@@ -75,7 +72,6 @@ class LSPServer {
       languageId: textDocument.languageId,
     });
 
-    // Analyze immediately
     this.analyzeDocument(textDocument.uri);
   }
 
@@ -84,18 +80,21 @@ class LSPServer {
     const doc = this.documents.get(textDocument.uri);
 
     if (!doc) {
-      console.error("[LSP Worker] Document not found:", textDocument.uri);
+      this.logger.log("Document not found on change", textDocument.uri);
       return;
     }
 
     // For full sync, just take the full text from first change
     // For incremental, you'd apply each change to the existing content
     if (contentChanges.length > 0) {
-      doc.content = contentChanges[0].text;
+      const changes = contentChanges?.[0];
+      if (changes) {
+        doc.content = changes.text;
+      }
       doc.version = textDocument.version;
     }
 
-    console.log("[LSP Worker] Document changed:", textDocument.uri);
+    this.logger.log("Handling didChange", textDocument.uri);
 
     // Re-analyze
     this.analyzeDocument(textDocument.uri);
@@ -105,10 +104,9 @@ class LSPServer {
     const doc = this.documents.get(uri);
     if (!doc) return;
 
-    console.log("[LSP Worker] Analyzing:", uri);
+    this.logger.log("Analyzing document", uri);
 
     try {
-      // TODO: Replace with your actual tree-sitter parsing and analysis
       const diagnostics = await this.runAnalysis(doc.content);
 
       // Send diagnostics back to main thread
@@ -118,26 +116,10 @@ class LSPServer {
         diagnostics,
       });
     } catch (error) {
-      console.error("[LSP Worker] Analysis error:", error);
+      this.logger.error("Analysis error", error);
     }
   }
 
-  private mapSeverity(
-    level: "error" | "warning" | "info" | "hint",
-  ): DiagnosticSeverity {
-    switch (level) {
-      case "error":
-        return DiagnosticSeverity.Error;
-      case "warning":
-        return DiagnosticSeverity.Warning;
-      case "info":
-        return DiagnosticSeverity.Information;
-      case "hint":
-        return DiagnosticSeverity.Hint;
-      default:
-        return DiagnosticSeverity.Information;
-    }
-  }
   private async runAnalysis(content: string): Promise<Diagnostic[]> {
     const tree = this.parser?.parse(content);
     const parseResult = this.adapter?.convert(tree!, content);
@@ -147,9 +129,9 @@ class LSPServer {
         analyzer.analyzeNode(node);
       }
     }
+    this.logger.log("Parsing complete", parseResult);
     const analysisResult = analyzer.finalizeAnalysis();
-    console.log("[LSP Worker] parseResult", parseResult);
-    console.log("[LSP Worker] analysisResult", analysisResult);
+    this.logger.log("Analysis complete", analysisResult);
 
     const diagnostics: Diagnostic[] = [];
     Object.keys(analysisResult).forEach((key) => {
@@ -162,7 +144,7 @@ class LSPServer {
             start: { line: item.line, character: item.column },
             end: { line: item.line, character: item.endColumn },
           },
-          severity: this.mapSeverity(item.severity),
+          severity: item.severity,
           message: item.message,
           source: "tome-lsp",
         });
@@ -192,8 +174,11 @@ class LSPServer {
     const response: ResponseMessage = {
       id,
       result,
-      error,
     };
+
+    if (error) {
+      response.error = error;
+    }
     self.postMessage(response);
   }
 
@@ -246,14 +231,11 @@ class LSPServer {
             break;
 
           default:
-            console.warn(
-              "[LSP Worker] Unknown notification:",
-              notification.method,
-            );
+            this.logger.warn(`Unhandled notification: ${notification.method}`);
         }
       }
     } catch (error) {
-      console.error("[LSP Worker] Error handling message:", error);
+      this.logger.error("Error handling message", error);
       if ("id" in message) {
         this.sendResponse((message as RequestMessage).id, null, {
           code: -32603,
@@ -264,8 +246,8 @@ class LSPServer {
   }
 }
 
-// Worker entry point
-const server = new LSPServer();
+const logger = new LspLogger("worker", true);
+const server = new LSPServer(logger);
 
 self.addEventListener("message", (event: MessageEvent) => {
   server.handleMessage(event.data);

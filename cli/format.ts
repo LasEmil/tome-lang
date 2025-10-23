@@ -1,5 +1,5 @@
 import { styleText } from "node:util";
-import type { AnalysisResult, SeverityLevel } from "../dsl/types.ts";
+import type { AnalysisResult } from "../dsl/types.ts";
 
 export function createStyler(noColor: boolean) {
   return function style(
@@ -17,7 +17,7 @@ export function prettyPrintAnalysisResults(
   result: AnalysisResult,
   filePath: string,
   style: ReturnType<typeof createStyler>,
-  level: SeverityLevel = "warning",
+  level: string,
 ): void {
   const diagnostics: Array<{
     line: number;
