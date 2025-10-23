@@ -122,8 +122,11 @@ class LSPServer {
 
   private async runAnalysis(content: string): Promise<Diagnostic[]> {
     const tree = this.parser?.parse(content);
-    console.log(tree.rootNode.toString());
     const parseResult = this.adapter?.convert(tree!, content);
+    if (parseResult?.value && parseResult?.valid) {
+      const nodes = TreeSitterAdapter.getNodeNetwork(parseResult.value);
+      this.sendNotification("nodeNetwork/update", { nodes });
+    }
     const analyzer = new Analyzer();
     if (parseResult?.value) {
       for (const node of parseResult.value.nodes) {

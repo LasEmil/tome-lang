@@ -11,6 +11,8 @@ import type {
   MessageType,
 } from "./types.ts";
 import { LspLogger } from "./logger.ts";
+import { useNodeNetworkStore } from "../editor/lib/state.ts";
+import type { NodeNetwork } from "../dsl/types.ts";
 
 type PendingRequest = {
   resolve: (value: unknown) => void;
@@ -66,6 +68,12 @@ export class LSPClient {
       case "textDocument/publishDiagnostics":
         this.handleDiagnostics(notification.params as PublishDiagnosticsParams);
         break;
+
+      case "nodeNetwork/update": {
+        const data = notification.params as { nodes: NodeNetwork };
+        useNodeNetworkStore.getState().setNetwork(data.nodes);
+        break;
+      }
 
       default:
         this.logger.warn(`Unhandled notification: ${notification.method}`);

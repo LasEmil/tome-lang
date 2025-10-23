@@ -11,6 +11,7 @@ export type MessageType =
   | "textDocument/publishDiagnostics"
   | "textDocument/completion"
   | "textDocument/hover"
+  | "nodeNetwork/update"
   | "shutdown";
 
 export interface Position {

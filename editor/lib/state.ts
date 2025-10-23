@@ -44,9 +44,18 @@ type NodeNetworkStoreActions = {
 };
 
 type NodeNetworkStore = NodeNetworkStoreState & NodeNetworkStoreActions;
-export const useNodeNetworkStore = create<NodeNetworkStore>((set) => ({
+export const useNodeNetworkStore = create<NodeNetworkStore>((set, get) => ({
   network: null,
   loading: true,
-  setNetwork: (network: NodeNetwork) => set({ network, loading: false }),
+  setNetwork: (network: NodeNetwork) => {
+    if (!network) {
+      return;
+    }
+    const currentNetwork = get().network;
+    if (JSON.stringify(currentNetwork) === JSON.stringify(network)) {
+      return;
+    }
+    set({ network, loading: false });
+  },
   setLoading: (loading: boolean) => set({ loading }),
 }));

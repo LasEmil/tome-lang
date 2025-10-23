@@ -2,11 +2,13 @@ import type { SyntaxNode } from "web-tree-sitter";
 import type {
   AssignmentOperator,
   AssignmentStatement,
+  AST,
   ChoiceStatement,
   DialogueNode,
   Expression,
   GotoStatement,
   Interpolation,
+  NodeNetwork,
   ParseResult,
   SayStatement,
   Statement,
@@ -127,6 +129,21 @@ export class TreeSitterAdapter {
     }
   }
 
+  static getNodeNetwork(ast: AST): NodeNetwork {
+    const nodes: { id: string }[] = [];
+    const links: { source: string; target: string }[] = [];
+
+    for (const node of ast.nodes) {
+      nodes.push({ id: node.id });
+      for (const stmt of node.statements) {
+        if (stmt.type === "Choice" || stmt.type === "Goto") {
+          links.push({ source: node.id, target: stmt.target });
+        }
+      }
+    }
+
+    return { nodes, links };
+  }
   private addError(message: string, line: number, column: number): void {
     const sourceLine = this.sourceLines[line - 1];
     this.errors.push(new ParserError(message, line, column, sourceLine));

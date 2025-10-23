@@ -240,7 +240,7 @@ export interface Reference {
 export type InferredType = "number" | "string" | "boolean" | "any";
 
 export type NodeNetwork = {
-  nodes: Set<string>;
+  nodes: { id: string }[];
   links: { source: string; target: string }[];
 };
 
