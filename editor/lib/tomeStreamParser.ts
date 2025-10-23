@@ -1,5 +1,17 @@
 import type { StreamParser } from "@codemirror/language";
-import { keywords, literalTypes, operators } from "../../dsl/constants.ts";
+
+// Keywords in the Tome language
+const keywords = new Set([
+  "node",
+  "say",
+  "choice",
+  "goto",
+  "if",
+  "end",
+  "random",
+  "true",
+  "false",
+]);
 
 interface TomeState {
   inString: boolean;
@@ -100,10 +112,25 @@ export const tomeStreamParser: StreamParser<TomeState> = {
       return "number";
     }
 
-    for (const op of operators.keys()) {
-      if (stream.match(op)) {
-        return "operator";
-      }
+    // Operators - multi-character first
+    if (
+      stream.match("==") ||
+      stream.match("!=") ||
+      stream.match(">=") ||
+      stream.match("<=") ||
+      stream.match("&&") ||
+      stream.match("||") ||
+      stream.match("+=") ||
+      stream.match("-=") ||
+      stream.match("*=") ||
+      stream.match("/=")
+    ) {
+      return "operator";
+    }
+
+    // Single character operators
+    if (stream.match(/[=<>!+\-*/]/)) {
+      return "operator";
     }
 
     // Punctuation
@@ -116,9 +143,6 @@ export const tomeStreamParser: StreamParser<TomeState> = {
       const word = stream.current();
       if (keywords.has(word)) {
         return "keyword";
-      }
-      if (literalTypes.has(word)) {
-        return "literal";
       }
       return "variableName.definition";
     }

@@ -278,13 +278,6 @@ export class Lexer {
       this.advance();
     }
 
-    // If we hit a newline or comment immediately after whitespace, this is an empty/blank line
-    // Don't process indentation for blank lines
-    if (this.peek() === "#" || this.isNewline(this.peek() || "")) {
-      this.atLineStart = false;
-      return;
-    }
-
     if (spaces > 0 && tabs > 0) {
       this.error("Mixed indentation (spaces + tabs) detected");
     }

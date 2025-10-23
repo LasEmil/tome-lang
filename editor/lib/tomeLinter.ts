@@ -64,20 +64,6 @@ export const getWordRange = (
     end++;
   }
 
-  const isOperatorChar = (char: string) => {
-    return /[=+\-*/<>!&|]/.test(char);
-  };
-
-  if (start === end && isOperatorChar(lineText[start]!)) {
-    // Highlight the entire operator sequence
-    while (start > 0 && isOperatorChar(lineText[start - 1]!)) {
-      start--;
-    }
-    while (end < lineText.length && isOperatorChar(lineText[end]!)) {
-      end++;
-    }
-  }
-
   // If we didn't find a word, highlight at least a few characters or to end of line
   if (start === end) {
     end = Math.min(start + 1, lineText.length);

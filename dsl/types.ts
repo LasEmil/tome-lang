@@ -5,7 +5,6 @@ export type TokenType =
   | "CHOICE"
   | "GOTO"
   | "IF"
-  | "ELSE"
   | "END"
   | "RANDOM"
 
@@ -85,8 +84,7 @@ export type Statement =
   | AssignmentStatement
   | SayStatement
   | ChoiceStatement
-  | GotoStatement
-  | ConditionalStatement;
+  | GotoStatement;
 
 export type AssignmentOperator = "=" | "+=" | "-=" | "*=" | "/=";
 export interface AssignmentStatement {
@@ -102,16 +100,6 @@ export interface SayStatement {
   type: "Say";
   text: string;
   interpolations: Interpolation[];
-  line: number;
-  column: number;
-  condition?: Expression;
-}
-
-export interface ConditionalStatement {
-  type: "Conditional";
-  condition: Expression;
-  statements: Statement[];
-  elseStatements?: Statement[];
   line: number;
   column: number;
 }
@@ -166,8 +154,6 @@ export interface BinaryExpression {
   operator: string;
   left: Expression;
   right: Expression;
-  line: number;
-  column: number;
 }
 
 export interface UnaryExpression {
@@ -257,5 +243,5 @@ export type SeverityLevel = (typeof SeverityLevels)[number];
 
 export type NodeNetwork = {
   nodes: Set<string>;
-  links: { source: string; target: string }[];
-};
+  links: {source: string, target: string}[]
+}

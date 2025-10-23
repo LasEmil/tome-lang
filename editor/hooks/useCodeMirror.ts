@@ -5,8 +5,8 @@ import { useEffect, useRef } from "react";
 import { type KeyBinding, keymap } from "@codemirror/view";
 import { catppuccinMocha } from "@catppuccin/codemirror";
 import { toast } from "sonner";
-import { linter } from "@codemirror/lint";
-import { StreamLanguage } from "@codemirror/language";
+import { linter} from "@codemirror/lint";
+import { StreamLanguage} from "@codemirror/language";
 import { tomeStreamParser } from "../lib/tomeStreamParser.ts";
 import { tomeLinter } from "../lib/tomeLinter.ts";
 
