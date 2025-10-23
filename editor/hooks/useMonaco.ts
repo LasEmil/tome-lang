@@ -10,6 +10,8 @@ import * as Monaco from "monaco-editor";
 import { setupLSPForMonaco } from "../../lsp/client.ts";
 import TomeLSPWorkerURL from "../../lsp/worker.ts?url";
 import { theme } from "../lib/theme.ts";
+import { toast } from "sonner";
+import { getSavedEditor, saveEditor } from "../lib/monacoPersist.ts";
 
 Theme.load(theme);
 async function initializeLSP(editor: monaco.editor.IStandaloneCodeEditor) {
@@ -34,6 +36,7 @@ async function initializeLSP(editor: monaco.editor.IStandaloneCodeEditor) {
   }
 }
 
+const TOME = "tome";
 export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   async function loadEditor(ref: RefObject<HTMLDivElement | null>) {
@@ -49,11 +52,14 @@ export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
 
     const models = monaco.editor.getModels();
     const existingModel = models.find(
-      (model) => model.uri.toString() === "file://test.tome/",
+      (model) => model.uri.toString() === `file://test.${TOME}/`,
     );
+
+    const savedEditor = await getSavedEditor();
+    const initialEditorValue = savedEditor?.value ?? text;
     const editor = monaco.editor.create(ref.current, {
-      value: text,
-      language: "tome",
+      value: initialEditorValue,
+      language: TOME,
       automaticLayout: true,
       wordWrap: "on",
       minimap: { enabled: false },
@@ -61,10 +67,24 @@ export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
       model:
         existingModel ??
         monaco.editor.createModel(
-          text,
-          "tome",
-          monaco.Uri.parse("file://test.tome"),
+          initialEditorValue,
+          TOME,
+          monaco.Uri.parse(`file://test.${TOME}`),
         ),
+    });
+    if (savedEditor?.viewState) {
+      editor.restoreViewState(savedEditor.viewState);
+    }
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      toast.info("File is saved automatically!");
+    });
+    editor.onDidChangeModelContent(async () => {
+      try {
+        await saveEditor(editor);
+      } catch (error) {
+        console.error("Failed to save editor state:", error);
+      }
     });
 
     await initializeLSP(editor);
@@ -75,6 +95,10 @@ export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
   }
 
   useEffect(() => {
+    console.log("Loading Monaco editor");
+    console.log(editorRef.current);
+
+    if (editorRef.current) return;
     loadEditor(ref).then((editor) => {
       if (editor) {
         editorRef.current = editor;
@@ -85,6 +109,7 @@ export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
       if (editorRef.current) {
         console.log("Disposing editor");
         editorRef.current.dispose();
+        editorRef.current = null;
       }
     };
   }, [ref]);
