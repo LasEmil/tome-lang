@@ -121,6 +121,8 @@ export interface ChoiceStatement {
   column: number; // Position of the target (colon)
   textLine?: number; // Position of the choice text
   textColumn?: number; // Position of the choice text
+  targetLine?: number; // Position of the target node
+  targetColumn?: number; // Position of the target node
 }
 
 export interface GotoStatement {
@@ -128,6 +130,8 @@ export interface GotoStatement {
   target: string;
   line: number;
   column: number;
+  targetLine?: number; // Position of the target node
+  targetColumn?: number; // Position of the target node
 }
 
 export type Expression =

@@ -322,6 +322,10 @@ export class TreeSitterAdapter {
       target,
       line: textNode.startPosition.row + 1,
       column: textNode.startPosition.column + 2, // +2 to skip the opening quote
+      textLine: textNode.startPosition.row + 1,
+      textColumn: textNode.startPosition.column + 2,
+      targetLine: targetNode.startPosition.row + 1,
+      targetColumn: targetNode.startPosition.column + 1,
     };
 
     if (condition) {
@@ -356,6 +360,8 @@ export class TreeSitterAdapter {
       target: targetNode.text,
       line: node.startPosition.row + 1,
       column: node.startPosition.column + 1,
+      targetLine: targetNode.startPosition.row + 1,
+      targetColumn: targetNode.startPosition.column + 1,
     };
   }
 

@@ -145,16 +145,16 @@ export class Analyzer {
       if (statement.type === "Choice") {
         this.nodeReferences.push({
           target: statement.target,
-          line: statement.line,
-          column: statement.column,
+          line: statement.targetLine ?? statement.line,
+          column: statement.targetColumn ?? statement.column,
           type: "choice",
           sourceNode: node.id,
         });
       } else if (statement.type === "Goto") {
         this.nodeReferences.push({
           target: statement.target,
-          line: statement.line,
-          column: statement.column,
+          line: statement.targetLine ?? statement.line,
+          column: statement.targetColumn ?? statement.column,
           type: "goto",
           sourceNode: node.id,
         });

@@ -1,6 +1,5 @@
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check
-
 const PREC = {
   OR: 1,
   AND: 2,
@@ -9,21 +8,16 @@ const PREC = {
   FACTOR: 5,
   UNARY: 6,
 };
-
 export default grammar({
   name: "tome",
-
-  extras: ($) => [/[ \t]/, $._newline],
-
+  extras: ($) => [/[ \t]/, $._newline, $.comment],
   externals: ($) => [
     $._string_content,
     $.interpolation_start,
     $.interpolation_end,
   ],
-
   rules: {
     source_file: ($) => repeat($.node_definition),
-
     node_definition: ($) =>
       seq(
         "node",
@@ -32,28 +26,22 @@ export default grammar({
         field("body", optional($._node_body)),
         "end",
       ),
-
     _node_body: ($) =>
       repeat1(choice(seq($._statement, $._newline), $._newline)),
-
     _statement: ($) =>
       choice(
         $.assignment_statement,
         $.say_statement,
         $.choice_statement,
         $.goto_statement,
-        $.comment,
       ),
-
     assignment_statement: ($) =>
       seq(
         $.variable,
         field("operator", choice("=", "+=", "-=", "*=", "/=")),
         $.expression,
       ),
-
     say_statement: ($) => seq("say", $.string_literal),
-
     choice_statement: ($) =>
       seq(
         "choice",
@@ -62,14 +50,10 @@ export default grammar({
         $.node_reference,
         optional($.condition_clause),
       ),
-
     node_reference: ($) => seq(":", field("target", $.identifier)),
-
     condition_clause: ($) =>
       seq(",", "if", ":", field("condition", $.expression)),
-
     goto_statement: ($) => seq("goto", $.node_reference),
-
     expression: ($) =>
       choice(
         $.primary_expression,
@@ -121,7 +105,6 @@ export default grammar({
           ),
         ),
       ),
-
     primary_expression: ($) =>
       choice(
         $.literal,
@@ -129,27 +112,20 @@ export default grammar({
         $.function_call,
         seq("(", $.expression, ")"),
       ),
-
     literal: ($) =>
       choice($.number_literal, $.string_literal, $.boolean_literal),
-
     boolean_literal: (_) => choice("true", "false"),
     number_literal: (_) => /\d+(\.\d+)?/,
-
     string_literal: ($) =>
       seq(
         '"',
         repeat(choice($._string_content, $.interpolation, $.escape_sequence)),
         '"',
       ),
-
     interpolation: ($) =>
       seq($.interpolation_start, $.expression, $.interpolation_end),
-
     escape_sequence: (_) => token.immediate(/\\./),
-
     variable: ($) => seq("@", $.identifier),
-
     function_call: ($) =>
       seq(
         field("name", $.identifier),
@@ -157,19 +133,14 @@ export default grammar({
         optional(sepBy1(",", $.expression)),
         ")",
       ),
-
     identifier: (_) => /[a-zA-Z_][a-zA-Z0-9_]*/,
-
     _newline: (_) => /[\r\n]+/,
-
     comment: (_) => token(seq("#", /.*/)),
   },
 });
-
 function sepBy1(sep, rule) {
   return seq(rule, repeat(seq(sep, rule)));
 }
-
 function sepBy(sep, rule) {
   return optional(sepBy1(sep, rule));
 }

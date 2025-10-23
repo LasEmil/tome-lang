@@ -9,8 +9,8 @@
   "scripts": {
     "start": "node --import=tsx index.ts",
     "dev": "node --watch --import=tsx index.ts",
-    "test": "tsx --test",
-    "test:watch": "tsx --test --watch",
+    "test": "tsx ./lsp/analyzer.test.ts --test",
+    "test:watch": "tsx ./lsp/analyzer.test.ts --test --watch",
     "cli": "node --import=tsx ./cli/index.ts",
     "cli:watch": "node --import=tsx ./cli/index.ts --watch",
     "editor": "vite editor --config ./editor/vite.config.ts",

@@ -122,6 +122,7 @@ class LSPServer {
 
   private async runAnalysis(content: string): Promise<Diagnostic[]> {
     const tree = this.parser?.parse(content);
+    console.log(tree.rootNode.toString());
     const parseResult = this.adapter?.convert(tree!, content);
     const analyzer = new Analyzer();
     if (parseResult?.value) {

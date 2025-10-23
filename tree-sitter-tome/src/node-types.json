@@ -304,10 +304,6 @@
             "named": true
           },
           {
-            "type": "comment",
-            "named": true
-          },
-          {
             "type": "goto_statement",
             "named": true
           },
@@ -535,7 +531,8 @@
   },
   {
     "type": "comment",
-    "named": true
+    "named": true,
+    "extra": true
   },
   {
     "type": "end",
