@@ -61,7 +61,7 @@ export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
       automaticLayout: true,
       wordWrap: "on",
       minimap: { enabled: false },
-      theme: "vs-dark",
+      theme: "cattppuccin-mocha",
       model: existingModel ?? monaco.editor.createModel(
         text,
         "tome",
