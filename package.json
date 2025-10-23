@@ -15,8 +15,8 @@
     "cli:watch": "node --import=tsx ./cli/index.ts --watch",
     "editor": "vite editor --config ./editor/vite.config.ts",
     "build:editor": "vite build editor --config ./editor/vite.config.ts",
-    "lezer:build": "lezer-generator lezer-tome/tome.grammar -o lezer-tome/tome-parser.ts --typeScript",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "build:tree-sitter": "cd tree-sitter-tome && tree-sitter generate --abi=14 && tree-sitter build --wasm"
   },
   "dependencies": {
     "@catppuccin/palette": "^1.7.1",
