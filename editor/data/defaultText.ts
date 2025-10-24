@@ -1,4 +1,6 @@
 export const text = `node start
+  @gold = 100
+  @health = 100
   say "Welcome to the adventure!"
   say "You have #{@gold} gold and #{@health} HP."
   
@@ -102,17 +104,6 @@ node inventory
   
   choice "Back", :start
 end
-
-node inventory
-  say "Your inventory:"
-  say "Gold: #{@gold}"
-  say "Potions: #{@potions}"
-  say "Level: #{@level}"
-  
-  choice "Back", :start
-end
-
-
 
 
 node ending

@@ -8,6 +8,7 @@ import Preview from "./Preview.tsx";
 import type { monaco } from "../lib/monaco.ts";
 import type { LSPClient } from "../../lsp/client.ts";
 import Header from "./Header.tsx";
+import Player from "./Player.tsx";
 
 export default function App() {
   const panels = useLayoutState((state) => state.panels);
@@ -61,7 +62,9 @@ export default function App() {
           id="player-panel"
           order={3}
           className="flex flex-col rounded-md overflow-hidden shadow bg-gradient-to-b from-slate-50 to-slate-100"
-        ></Panel>
+        >
+          <Player />
+        </Panel>
       ),
     },
   ];

@@ -1,0 +1,430 @@
+import { ExpressionEvaluator } from "./evaluator.ts";
+import { VariableStore } from "./variableStore.ts";
+import type {
+  ChoiceOption,
+  DialogueFrame,
+  RuntimeCallbacks,
+  RuntimeOptions,
+  RuntimeState,
+  UserChoice,
+} from "./types.ts";
+import { RuntimeError } from "./errors.ts";
+
+export class TomeRuntime {
+  private tree: any;
+  private sourceCode: string;
+  private variables: VariableStore;
+  private evaluator: ExpressionEvaluator;
+  private callbacks?: RuntimeCallbacks;
+  private maxGotoDepth: number;
+  private visitedNodes: string[] = [];
+  private frameCount: number = 0;
+  private nodeMap: Map<string, any> = new Map();
+
+  constructor(tree: any, sourceCode: string, options?: RuntimeOptions) {
+    this.tree = tree;
+    this.sourceCode = sourceCode;
+    this.maxGotoDepth = options?.maxGotoDepth ?? 100;
+    this.callbacks = options?.callbacks;
+
+    // Initialize variable store with callbacks
+    this.variables = new VariableStore(
+      options?.initialVariables,
+      this.callbacks?.onVariableChange,
+    );
+
+    this.evaluator = new ExpressionEvaluator(this.variables, sourceCode);
+
+    // Build node map for quick lookup
+    this.buildNodeMap();
+
+    // Validate start node exists
+    const startNode = options?.startNode ?? "start";
+    if (!this.nodeMap.has(startNode)) {
+      throw new RuntimeError(`Start node '${startNode}' not found`);
+    }
+  }
+
+  private buildNodeMap(): void {
+    const rootNode = this.tree.rootNode;
+
+    for (let i = 0; i < rootNode.childCount; i++) {
+      const child = rootNode.children[i];
+      if (child.type === "node_definition") {
+        const nameNode = child.childForFieldName("name");
+        if (nameNode) {
+          const nodeName = nameNode.text;
+          this.nodeMap.set(nodeName, child);
+        }
+      }
+    }
+  }
+
+  *execute(
+    startNode: string = "start",
+  ): Generator<DialogueFrame, void, UserChoice> {
+    let currentNode = startNode;
+
+    while (currentNode) {
+      try {
+        // Collect complete frame (follows goto chains)
+        const frame = this.collectFrame(currentNode);
+        this.frameCount++;
+
+        if (frame.choices.length === 0) {
+          // End node - yield final frame and exit
+          yield frame;
+          return;
+        }
+
+        // Yield frame and wait for user choice
+        const userChoice = yield frame;
+
+        // Validate choice
+        if (
+          userChoice.choiceIndex < 0 ||
+          userChoice.choiceIndex >= frame.choices.length
+        ) {
+          throw new RuntimeError(
+            `Invalid choice index: ${userChoice.choiceIndex}`,
+            undefined,
+            undefined,
+            currentNode,
+          );
+        }
+
+        // Jump to selected node
+        currentNode = frame.choices[userChoice.choiceIndex].target;
+
+        // Validate target node exists
+        if (!this.nodeMap.has(currentNode)) {
+          throw new RuntimeError(
+            `Target node '${currentNode}' not found`,
+            undefined,
+            undefined,
+            frame.nodeId,
+          );
+        }
+      } catch (error) {
+        if (this.callbacks?.onError) {
+          this.callbacks.onError(error as RuntimeError);
+        }
+        throw error;
+      }
+    }
+  }
+
+  private collectFrame(startNodeId: string): DialogueFrame {
+    const dialogue: string[] = [];
+    const nodeHistory: string[] = [];
+    let currentNodeId = startNodeId;
+    let gotoDepth = 0;
+
+    // Follow goto chains, accumulating dialogue
+    while (currentNodeId) {
+      if (gotoDepth++ > this.maxGotoDepth) {
+        throw new RuntimeError(
+          "Infinite goto loop detected",
+          undefined,
+          undefined,
+          currentNodeId,
+        );
+      }
+
+      nodeHistory.push(currentNodeId);
+      this.visitedNodes.push(currentNodeId);
+      this.callbacks?.onNodeEnter?.(currentNodeId, this.variables.getAll());
+
+      const nodeDefinition = this.nodeMap.get(currentNodeId);
+      if (!nodeDefinition) {
+        throw new RuntimeError(`Node '${currentNodeId}' not found`);
+      }
+
+      let gotoTarget: string | null = null;
+      let hasChoices = false;
+
+      // Process all named children (body statements)
+      for (let i = 0; i < nodeDefinition.namedChildCount; i++) {
+        const stmt = nodeDefinition.namedChildren[i];
+
+        // Skip the name identifier (first named child)
+        if (i === 0 && stmt.type === "identifier") continue;
+
+        try {
+          if (stmt.type === "say_statement") {
+            const text = this.processSayStatement(stmt);
+            dialogue.push(text);
+            this.callbacks?.onDialogueCollected?.(text);
+          } else if (stmt.type === "assignment_statement") {
+            this.processAssignment(stmt, currentNodeId);
+          } else if (stmt.type === "goto_statement") {
+            gotoTarget = this.processGoto(stmt);
+          } else if (stmt.type === "choice_statement") {
+            hasChoices = true;
+          }
+        } catch (error) {
+          if (error instanceof RuntimeError) {
+            error.nodeId = currentNodeId;
+          }
+          throw error;
+        }
+      }
+
+      this.callbacks?.onNodeExit?.(currentNodeId);
+
+      // If goto exists and no choices, continue to next node
+      if (gotoTarget && !hasChoices) {
+        currentNodeId = gotoTarget;
+      } else {
+        // No goto, or choices exist - collect choices and return frame
+        const choices = this.collectChoices(nodeDefinition, currentNodeId);
+
+        if (choices.length === 0 && hasChoices) {
+          throw new RuntimeError(
+            "All conditional choices evaluated to false, dialogue has no valid options",
+            undefined,
+            undefined,
+            currentNodeId,
+          );
+        }
+
+        return {
+          nodeId: startNodeId,
+          nodeHistory,
+          dialogue,
+          choices,
+          variables: this.variables.getAll(),
+        };
+      }
+    }
+
+    throw new RuntimeError("Unexpected end of frame collection");
+  }
+
+  private processSayStatement(stmt: any): string {
+    const stringLiteral =
+      stmt.childForFieldName("text") ||
+      stmt.children.find((c: any) => c.type === "string_literal");
+
+    if (!stringLiteral) {
+      throw new RuntimeError(
+        "Say statement missing text",
+        stmt.startPosition.row,
+        stmt.startPosition.column,
+      );
+    }
+
+    // Remove quotes
+    let text = stringLiteral.text.slice(1, -1);
+
+    // Handle escape sequences
+    text = text.replace(/\\n/g, "\n").replace(/\\"/g, '"');
+
+    // String interpolation
+    text = this.evaluator.interpolateString(text);
+
+    return text;
+  }
+
+  private processAssignment(stmt: any, nodeId: string): void {
+    const variable =
+      stmt.childForFieldName("variable") ||
+      stmt.children.find((c: any) => c.type === "variable");
+    const expression =
+      stmt.childForFieldName("value") ||
+      stmt.children.find((c: any) => c.type === "expression");
+
+    if (!variable || !expression) {
+      throw new RuntimeError(
+        "Invalid assignment statement",
+        stmt.startPosition.row,
+        stmt.startPosition.column,
+        nodeId,
+      );
+    }
+
+    // Get variable name (skip '@' symbol)
+    const varName = variable.children[1].text;
+
+    // Find operator
+    let operator = "=";
+    for (let i = 0; i < stmt.childCount; i++) {
+      const child = stmt.children[i];
+      if (["+", "-", "*", "/"].some((op) => child.text.includes(op + "="))) {
+        operator = child.text;
+        break;
+      }
+    }
+
+    // Evaluate expression
+    const value = this.evaluator.evaluate(expression);
+
+    // Apply operation
+    if (operator === "=") {
+      this.variables.set(varName, value);
+    } else {
+      const currentValue = this.variables.get(varName);
+      let newValue: any;
+
+      switch (operator) {
+        case "+=":
+          newValue = Number(currentValue) + Number(value);
+          break;
+        case "-=":
+          newValue = Number(currentValue) - Number(value);
+          break;
+        case "*=":
+          newValue = Number(currentValue) * Number(value);
+          break;
+        case "/=":
+          if (Number(value) === 0) {
+            throw new RuntimeError(
+              "Division by zero",
+              stmt.startPosition.row,
+              stmt.startPosition.column,
+              nodeId,
+            );
+          }
+          newValue = Number(currentValue) / Number(value);
+          break;
+        default:
+          throw new RuntimeError(
+            `Unknown assignment operator: ${operator}`,
+            stmt.startPosition.row,
+            stmt.startPosition.column,
+            nodeId,
+          );
+      }
+
+      this.variables.set(varName, newValue);
+    }
+  }
+
+  private processGoto(stmt: any): string {
+    const nodeRef =
+      stmt.childForFieldName("target") ||
+      stmt.children.find((c: any) => c.type === "node_reference");
+
+    if (!nodeRef) {
+      throw new RuntimeError(
+        "Goto statement missing target",
+        stmt.startPosition.row,
+        stmt.startPosition.column,
+      );
+    }
+
+    const targetNode =
+      nodeRef.childForFieldName("target") ||
+      nodeRef.children.find((c: any) => c.type === "identifier");
+    return targetNode.text;
+  }
+
+  private collectChoices(nodeDefinition: any, nodeId: string): ChoiceOption[] {
+    const choices: ChoiceOption[] = [];
+    let choiceIndex = 0;
+
+    // Iterate through named children, skipping the identifier (name)
+    for (let i = 0; i < nodeDefinition.namedChildCount; i++) {
+      const child = nodeDefinition.namedChildren[i];
+
+      // Skip the name identifier
+      if (i === 0 && child.type === "identifier") continue;
+
+      if (child.type === "choice_statement") {
+        const choice = this.processChoice(child, nodeId);
+
+        if (choice) {
+          choices.push({
+            ...choice,
+            index: choiceIndex++,
+          });
+        }
+      }
+    }
+
+    return choices;
+  }
+
+  private processChoice(
+    stmt: any,
+    nodeId: string,
+  ): { text: string; target: string } | null {
+    const textNode = stmt.childForFieldName("text");
+    const nodeRef =
+      stmt.childForFieldName("target") ||
+      stmt.children.find((c: any) => c.type === "node_reference");
+    const conditionClause = stmt.children.find(
+      (c: any) => c.type === "condition_clause",
+    );
+
+    if (!textNode || !nodeRef) {
+      throw new RuntimeError(
+        "Choice statement missing text or target",
+        stmt.startPosition.row,
+        stmt.startPosition.column,
+        nodeId,
+      );
+    }
+
+    // Check condition if exists
+    if (conditionClause) {
+      const conditionExpr = conditionClause.childForFieldName("condition");
+      if (conditionExpr) {
+        const result = this.evaluator.evaluate(conditionExpr);
+        if (!result) {
+          return null; // Condition false, skip this choice
+        }
+      }
+    }
+
+    // Remove quotes from text
+    const text = textNode.text
+      .slice(1, -1)
+      .replace(/\\n/g, "\n")
+      .replace(/\\"/g, '"');
+
+    // Get target node name
+    const targetNode =
+      nodeRef.childForFieldName("target") ||
+      nodeRef.children.find((c: any) => c.type === "identifier");
+    const target = targetNode.text;
+
+    return { text, target };
+  }
+
+  // State management for save/load
+  getState(): RuntimeState {
+    return {
+      variables: this.variables.getAll(),
+      visitedNodes: [...this.visitedNodes],
+      frameCount: this.frameCount,
+    };
+  }
+
+  setState(state: RuntimeState): void {
+    this.variables.setState(state.variables);
+    this.visitedNodes = [...state.visitedNodes];
+    this.frameCount = state.frameCount;
+  }
+
+  // Utility methods
+  getVariables(): Record<string, any> {
+    return this.variables.getAll();
+  }
+
+  getVariable(name: string): any {
+    return this.variables.get(name);
+  }
+
+  setVariable(name: string, value: any): void {
+    this.variables.set(name, value);
+  }
+
+  getVisitedNodes(): string[] {
+    return [...this.visitedNodes];
+  }
+
+  getFrameCount(): number {
+    return this.frameCount;
+  }
+}
