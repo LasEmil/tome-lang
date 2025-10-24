@@ -122,9 +122,6 @@
   }
 }
 
-.cm-editor{
-  @apply flex-grow
-}
 
 #editor-panel > div {
   @apply flex flex-1 overflow-hidden;

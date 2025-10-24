@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { monaco } from "../lib/monaco.ts";
 import { text } from "../data/defaultText.ts";
 import Parser from "web-tree-sitter";
@@ -7,7 +7,7 @@ import tomeWasm from "../../tree-sitter-tome/tree-sitter-tome.wasm?url";
 import { Theme, Language, MonacoTreeSitter } from "monaco-tree-sitter";
 import tomeGrammar from "../data/tome.json" with { type: "json" };
 import * as Monaco from "monaco-editor";
-import { setupLSPForMonaco } from "../../lsp/client.ts";
+import { LSPClient, setupLSPForMonaco } from "../../lsp/client.ts";
 import TomeLSPWorkerURL from "../../lsp/worker.ts?url";
 import { theme } from "../lib/theme.ts";
 import { toast } from "sonner";
@@ -37,8 +37,18 @@ async function initializeLSP(editor: monaco.editor.IStandaloneCodeEditor) {
 }
 
 const TOME = "tome";
-export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+export const useMonaco = (
+  ref: RefObject<HTMLDivElement | null>,
+  onReady:
+    | ((args: {
+        editor?: monaco.editor.IStandaloneCodeEditor;
+        lspClient?: LSPClient;
+      }) => void)
+    | null = null,
+): { editor?: monaco.editor.IStandaloneCodeEditor; lspClient?: LSPClient } => {
+  const [editorRef, setEditorRef] =
+    useState<monaco.editor.IStandaloneCodeEditor>();
+  const [lspClient, setLspClient] = useState<LSPClient>();
   async function loadEditor(ref: RefObject<HTMLDivElement | null>) {
     if (!ref.current) return;
     await Parser.init({
@@ -87,32 +97,45 @@ export const useMonaco = (ref: RefObject<HTMLDivElement | null>) => {
       }
     });
 
-    await initializeLSP(editor);
+    const client = await initializeLSP(editor);
+    if (client) {
+      setLspClient(client);
+    }
 
     new MonacoTreeSitter(Monaco, editor, language);
+    if (onReady && client) {
+      onReady({ editor, lspClient: client });
+    }
 
-    return editor;
+    return { editor };
   }
 
   useEffect(() => {
     console.log("Loading Monaco editor");
-    console.log(editorRef.current);
+    console.log(editorRef);
 
-    if (editorRef.current) return;
-    loadEditor(ref).then((editor) => {
-      if (editor) {
-        editorRef.current = editor;
-      }
-    });
+    if (!editorRef) {
+      loadEditor(ref).then((result) => {
+        if (result?.editor) {
+          setEditorRef(result.editor);
+        }
+      });
+    }
 
     return () => {
-      if (editorRef.current) {
+      if (editorRef) {
         console.log("Disposing editor");
-        editorRef.current.dispose();
-        editorRef.current = null;
+        editorRef.dispose();
+        setEditorRef(undefined);
       }
     };
-  }, [ref]);
+  }, [ref, editorRef]);
+  if (!editorRef) {
+    return {};
+  }
+  if (!lspClient) {
+    return { editor: editorRef };
+  }
 
-  return editorRef;
+  return { editor: editorRef, lspClient: lspClient };
 };

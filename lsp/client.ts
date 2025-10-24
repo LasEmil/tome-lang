@@ -9,6 +9,7 @@ import type {
   InitializeParams,
   PublishDiagnosticsParams,
   MessageType,
+  Location,
 } from "./types.ts";
 import { LspLogger } from "./logger.ts";
 import { useNodeNetworkStore } from "../editor/lib/state.ts";
@@ -77,13 +78,47 @@ export class LSPClient {
 
       case "nodeNetwork/updateEdges": {
         const data = notification.params as EdgesMap;
-        console.log("Received edge map update", data);
+        this.logger.log("Received edge map update", data);
         useNodeNetworkStore.getState().setEdgeMap(data);
         break;
       }
+      case "textDocument/definition": {
+        const data = notification.params as Location;
+        this.logger.log("Received definition location", data);
+        this.handleDefinition(data);
+        break;
+      }
+
       default:
         this.logger.warn(`Unhandled notification: ${notification.method}`);
     }
+  }
+
+  private handleDefinition(params: Location): void {
+    const { start: startPosition, end: endPosition } = params.range;
+    const range = new monaco.Range(
+      startPosition.line,
+      startPosition.character,
+      endPosition.line,
+      endPosition.character,
+    );
+
+    const model = monaco.editor.getModel(this.modelUri!);
+    if (!model) {
+      this.logger.error(`No model found for URI: ${params.uri}`);
+      return;
+    }
+    const editor = monaco.editor
+      .getEditors()
+      .find(
+        (ed) => ed.getModel()?.uri.toString() === this.modelUri?.toString(),
+      );
+    if (!editor) {
+      this.logger.error(`No editor found for model URI: ${this.modelUri}`);
+      return;
+    }
+    editor.revealRangeInCenter(range);
+    editor.setSelection(range);
   }
 
   private handleDiagnostics(params: PublishDiagnosticsParams): void {
@@ -196,6 +231,17 @@ export class LSPClient {
           text, // Full document sync
         },
       ],
+    });
+  }
+
+  didSelectNode(nodeId: string): void {
+    this.logger.log("didSelectNode", { nodeId });
+    const modelUriStr = this.modelUri?.toString() || "";
+    this.sendNotification("nodeNetwork/select", {
+      textDocument: {
+        uri: modelUriStr.substring(0, modelUriStr.length - 1) || "",
+      },
+      nodeId,
     });
   }
 

@@ -12,6 +12,8 @@ import {
   type PublishDiagnosticsParams,
   type Diagnostic,
   type MessageType,
+  type NodeNetworkSelectParams,
+  type Location,
 } from "./types.ts";
 
 import treeSitterWasm from "web-tree-sitter/tree-sitter.wasm?url";
@@ -32,6 +34,7 @@ class LSPServer {
   private documents = new Map<string, DocumentState>();
   private parser: Parser | null = null;
   private adapter: TreeSitterAdapter | null = null;
+  private tree: Parser.Tree | null = null;
   private initialized = false;
 
   constructor(public logger: LspLogger) {
@@ -57,6 +60,7 @@ class LSPServer {
         textDocumentSync: 1,
         completionProvider: false,
         hoverProvider: false,
+        definitionProvider: true,
       },
     };
   }
@@ -100,6 +104,62 @@ class LSPServer {
     this.analyzeDocument(textDocument.uri);
   }
 
+  handleNodeNetworkSelect(params: NodeNetworkSelectParams): void {
+    const { nodeId, textDocument } = params;
+    const doc = this.documents.get(textDocument.uri);
+    this.logger.log("documents", [...this.documents.keys()]);
+
+    if (!doc) {
+      this.logger.log("Document not found on select", textDocument.uri);
+      return;
+    }
+
+    this.logger.log("Node selected in network", nodeId);
+    const query = this.parser?.getLanguage().query(`
+  (node_definition
+    name: (identifier) @node_name
+  ) @node_def
+`);
+
+    if (!query) {
+      this.logger.warn("No query available for node selection");
+      return;
+    }
+    if (!this.tree) {
+      this.logger.warn("No parse tree available for node selection");
+      return;
+    }
+    for (const match of query.matches(this.tree.rootNode)) {
+      const nameNode = match.captures.find((c) => c.name === "node_name")?.node;
+      const defNode = match.captures.find((c) => c.name === "node_def")?.node;
+      if (!nameNode || !defNode) continue;
+      const nameText = doc.content.slice(
+        nameNode.startIndex,
+        nameNode.endIndex,
+      );
+      if (nameText === nodeId) {
+        this.logger.log("Found node_definition for:", nodeId);
+
+        const result: Location = {
+          uri: doc.uri,
+          range: {
+            start: {
+              line: defNode.startPosition.row + 1,
+              character: defNode.startPosition.column + 1,
+            },
+            end: {
+              line: defNode.endPosition.row + 1,
+              character: defNode.endPosition.column + 1,
+            },
+          },
+        };
+        this.sendNotification("textDocument/definition", result);
+        console.log(defNode);
+      }
+    }
+    this.logger.warn("Node definition not found for:", nodeId);
+  }
+
   private async analyzeDocument(uri: string): Promise<void> {
     const doc = this.documents.get(uri);
     if (!doc) return;
@@ -122,6 +182,7 @@ class LSPServer {
 
   private async runAnalysis(content: string): Promise<Diagnostic[]> {
     const tree = this.parser?.parse(content);
+    this.tree = tree || null;
     const parseResult = this.adapter?.convert(tree!, content);
     if (parseResult?.value && parseResult?.valid) {
       const nodes = TreeSitterAdapter.getNodeNetwork(parseResult.value);
@@ -166,9 +227,9 @@ class LSPServer {
     this.sendNotification("textDocument/publishDiagnostics", params);
   }
 
-  private sendNotification(method: string, params: unknown): void {
+  private sendNotification(method: MessageType, params: unknown): void {
     const notification: NotificationMessage = {
-      method: method as MessageType,
+      method: method,
       params,
     };
     self.postMessage(notification);
@@ -235,6 +296,11 @@ class LSPServer {
           case "textDocument/didChange":
             this.handleDidChange(
               notification.params as DidChangeTextDocumentParams,
+            );
+            break;
+          case "nodeNetwork/select":
+            this.handleNodeNetworkSelect(
+              notification.params as NodeNetworkSelectParams,
             );
             break;
 

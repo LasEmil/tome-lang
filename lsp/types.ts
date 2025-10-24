@@ -13,6 +13,8 @@ export type MessageType =
   | "textDocument/hover"
   | "nodeNetwork/update"
   | "nodeNetwork/updateEdges"
+  | "nodeNetwork/select"
+  | "textDocument/definition"
   | "shutdown";
 
 export interface Position {
@@ -86,6 +88,7 @@ export interface InitializeResult {
     textDocumentSync: number; // 1 = Full, 2 = Incremental
     completionProvider?: boolean;
     hoverProvider?: boolean;
+    definitionProvider?: boolean;
   };
 }
 
@@ -98,8 +101,20 @@ export interface DidChangeTextDocumentParams {
   contentChanges: TextDocumentContentChangeEvent[];
 }
 
+export interface NodeNetworkSelectParams {
+  textDocument: TextDocumentIdentifier;
+  nodeId: string;
+}
+
 export interface PublishDiagnosticsParams {
   uri: string;
   version?: number;
   diagnostics: Diagnostic[];
+}
+
+type DocumentUri = string;
+
+export interface Location {
+  uri: DocumentUri;
+  range: Range;
 }
