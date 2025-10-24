@@ -83,7 +83,7 @@ export default function App() {
           <React.Fragment key={p.id}>
             {p.component}
             {i < visiblePanels.length - 1 && (
-              <PanelResizeHandle className="w-4 bg-gray-200 flex justify-center items-center hover:bg-gray-300 cursor-col-resize">
+              <PanelResizeHandle className="w-4 bg-gray-200 flex justify-center items-center hover:bg-gray-300 cursor-col-resize rounded-md">
                 <DragHandleDots2Icon />
               </PanelResizeHandle>
             )}

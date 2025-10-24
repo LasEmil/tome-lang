@@ -63,7 +63,7 @@ export default function Preview({ onNodeClick }: PreviewProps) {
         if (visited.has(nodeId)) continue;
         visited.add(nodeId);
         nodeToLayer.set(nodeId, currentLayer);
-        layers[currentLayer].push(nodeId);
+        layers[currentLayer]?.push(nodeId);
 
         const edge = edgeMap.get(nodeId);
         if (edge) {
@@ -82,7 +82,7 @@ export default function Preview({ onNodeClick }: PreviewProps) {
     edgeMap.forEach((_, nodeId) => {
       if (!visited.has(nodeId)) {
         if (!layers[currentLayer]) layers[currentLayer] = [];
-        layers[currentLayer].push(nodeId);
+        layers[currentLayer]?.push(nodeId);
         nodeToLayer.set(nodeId, currentLayer);
       }
     });

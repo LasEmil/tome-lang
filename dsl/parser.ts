@@ -121,22 +121,6 @@ export class Parser {
     }
   }
 
-  static getNodeNetwork(ast: AST): NodeNetwork {
-    const nodes = new Set<string>();
-    const links: { source: string; target: string }[] = [];
-
-    for (const node of ast.nodes) {
-      nodes.add(node.id);
-      for (const stmt of node.statements) {
-        if (stmt.type === "Choice" || stmt.type === "Goto") {
-          links.push({ source: node.id, target: stmt.target });
-        }
-      }
-    }
-
-    return { nodes, links };
-  }
-
   private synchronize(): void {
     // Skip tokens until we find a safe point to resume (next node or EOF)
     while (!this.isAtEnd()) {

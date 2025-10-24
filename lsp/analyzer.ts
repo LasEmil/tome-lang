@@ -308,6 +308,7 @@ export class Analyzer {
         const interpolationContent = match[1];
         const interpolationStart = match.index;
 
+        if (!interpolationContent) continue;
         // Try to parse the interpolation content as an expression
         // We need to analyze it for function calls
         this.analyzeInterpolationContent(
@@ -384,7 +385,7 @@ export class Analyzer {
     while ((match = variableRegex.exec(content)) !== null) {
       const varName = match[1];
       const varColumn = column + match.index;
-
+      if (!varName) continue;
       if (!this.definedVariables.has(varName)) {
         this.warnings.push({
           type: "undefined_variable",
@@ -409,7 +410,7 @@ export class Analyzer {
       const funcColumn = column + match.index;
 
       // Count arguments by splitting on commas (simple approach)
-      const args = argsString.trim()
+      const args = argsString?.trim()
         ? argsString.split(",").map((s) => s.trim())
         : [];
 
@@ -433,7 +434,7 @@ export class Analyzer {
           column: funcColumn,
           node: nodeId,
           severity: MarkerSeverity.Error,
-          endColumn: funcColumn + funcName.length,
+          endColumn: funcColumn + (funcName?.length ?? 0),
         });
       }
     }
