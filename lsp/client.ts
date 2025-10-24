@@ -12,7 +12,7 @@ import type {
 } from "./types.ts";
 import { LspLogger } from "./logger.ts";
 import { useNodeNetworkStore } from "../editor/lib/state.ts";
-import type { NodeNetwork } from "../dsl/types.ts";
+import type { Edge, EdgesMap, NodeNetwork } from "../dsl/types.ts";
 
 type PendingRequest = {
   resolve: (value: unknown) => void;
@@ -75,6 +75,12 @@ export class LSPClient {
         break;
       }
 
+      case "nodeNetwork/updateEdges": {
+        const data = notification.params as EdgesMap;
+        console.log("Received edge map update", data);
+        useNodeNetworkStore.getState().setEdgeMap(data);
+        break;
+      }
       default:
         this.logger.warn(`Unhandled notification: ${notification.method}`);
     }

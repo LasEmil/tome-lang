@@ -5,6 +5,8 @@ import type {
   AST,
   ChoiceStatement,
   DialogueNode,
+  Edge,
+  EdgesMap,
   Expression,
   GotoStatement,
   Interpolation,
@@ -144,6 +146,38 @@ export class TreeSitterAdapter {
 
     return { nodes, links };
   }
+
+  static linkNodes(ast: AST): EdgesMap {
+    const nodeMap: EdgesMap = new Map();
+
+    for (const node of ast.nodes) {
+      const nodeLinks: Edge = {
+        outgoing: new Set([
+          ...node.statements
+            .filter((stmt) => stmt.type === "Choice" || stmt.type === "Goto")
+            .map((stmt) => stmt.target),
+        ]),
+        incoming: new Set(),
+      };
+
+      nodeMap.set(node.id, nodeLinks);
+    }
+
+    // Populate incoming edges
+
+    for (const [nodeId, edges] of nodeMap.entries()) {
+      for (const targetId of edges.outgoing) {
+        const targetNode = nodeMap.get(targetId);
+
+        if (targetNode) {
+          targetNode.incoming.add(nodeId);
+        }
+      }
+    }
+
+    return nodeMap;
+  }
+
   private addError(message: string, line: number, column: number): void {
     const sourceLine = this.sourceLines[line - 1];
     this.errors.push(new ParserError(message, line, column, sourceLine));

@@ -239,13 +239,16 @@ export interface Reference {
 
 export type InferredType = "number" | "string" | "boolean" | "any";
 
-export type NodeNetwork = {
-  nodes: { id: string }[];
-  links: { source: string; target: string }[];
-};
-
 export interface ParseResult {
   value: AST | null;
   errors: ParserError[];
   valid: boolean;
 }
+
+export type NodeNetwork = {
+  nodes: { id: string }[];
+  links: { source: string; target: string }[];
+};
+
+export type Edge = { outgoing: Set<string>; incoming: Set<string> };
+export type EdgesMap = Map<string, Edge>;

@@ -126,6 +126,10 @@ class LSPServer {
     if (parseResult?.value && parseResult?.valid) {
       const nodes = TreeSitterAdapter.getNodeNetwork(parseResult.value);
       this.sendNotification("nodeNetwork/update", { nodes });
+
+      const edgeMap = TreeSitterAdapter.linkNodes(parseResult.value);
+      this.logger.log("Edge map", edgeMap);
+      this.sendNotification("nodeNetwork/updateEdges", edgeMap);
     }
     const analyzer = new Analyzer();
     if (parseResult?.value) {
