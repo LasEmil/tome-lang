@@ -5,7 +5,6 @@
 **Tome** is a dialogue scripting language and editor for game developers. It features:
 - Ruby-inspired syntax for writing branching dialogues
 - TypeScript/Node.js parser that generates an AST
-- XState integration for dialogue state management
 - D3.js visualization of dialogue graphs
 - Built-in variable system with conditionals
 
@@ -482,7 +481,6 @@ tome parse input.tome --debug
 - Better error recovery
 - IDE integration (LSP)
 - Web editor with D3 visualization
-- XState runtime integration
 
 ## Development Guidelines
 
@@ -564,4 +562,4 @@ end
 
 - Project name: **Tome**
 - Inspired by: Final Fantasy XIV (hence the name)
-- Architecture: TypeScript parser → JSON AST → XState machine → D3 visualization
+- Architecture: TypeScript parser → JSON AST -> D3 visualization

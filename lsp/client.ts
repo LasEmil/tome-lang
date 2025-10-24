@@ -12,7 +12,10 @@ import type {
   Location,
 } from "./types.ts";
 import { LspLogger } from "./logger.ts";
-import { useNodeNetworkStore } from "../editor/lib/state.ts";
+import {
+  useDiagnosticStore,
+  useNodeNetworkStore,
+} from "../editor/lib/state.ts";
 import type { Edge, EdgesMap, NodeNetwork } from "../dsl/types.ts";
 
 type PendingRequest = {
@@ -151,6 +154,7 @@ export class LSPClient {
       this.logger.error(`No model found for URI: ${params.uri}`);
       return;
     }
+    useDiagnosticStore.getState().setDiagnostics(params.diagnostics);
     monaco.editor.setModelMarkers(model, "tome-lsp", markers);
   }
 

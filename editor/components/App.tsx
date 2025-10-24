@@ -7,6 +7,7 @@ import { Toaster } from "./ui/sonner.tsx";
 import Preview from "./Preview.tsx";
 import type { monaco } from "../lib/monaco.ts";
 import type { LSPClient } from "../../lsp/client.ts";
+import Header from "./Header.tsx";
 
 export default function App() {
   const panels = useLayoutState((state) => state.panels);
@@ -29,7 +30,7 @@ export default function App() {
           minSize={20}
           id="editor-panel"
           order={1}
-          className="flex flex-col rounded-md overflow-hidden"
+          className="flex flex-col rounded-md shadow overflow-hidden"
         >
           <Editor onEditorReady={setEditor} />
         </Panel>
@@ -44,7 +45,7 @@ export default function App() {
           defaultSize={25}
           id="preview-panel"
           order={2}
-          className="flex flex-col rounded-md overflow-hidden"
+          className="flex flex-col rounded-md shadow overflow-hidden"
         >
           <Preview onNodeClick={onNodeClick} />
         </Panel>
@@ -59,18 +60,17 @@ export default function App() {
           minSize={20}
           id="player-panel"
           order={3}
-          className="flex flex-col rounded-md overflow-hidden"
-        >
-          Player
-        </Panel>
+          className="flex flex-col rounded-md overflow-hidden shadow bg-gradient-to-b from-slate-50 to-slate-100"
+        ></Panel>
       ),
     },
   ];
 
   const visiblePanels = panelConfigs.filter((p) => p.visible);
   return (
-    <div className="h-screen flex flex-col bg-gray-200 p-4">
+    <div className="h-screen flex flex-col bg-gray-200 p-2">
       <Toaster position="bottom-center" />
+      <Header />
       {/* <div> */}
       {/*   <LayoutSwitcher /> */}
       {/* </div> */}
@@ -83,7 +83,7 @@ export default function App() {
           <React.Fragment key={p.id}>
             {p.component}
             {i < visiblePanels.length - 1 && (
-              <PanelResizeHandle className="w-4 bg-gray-200 flex justify-center items-center hover:bg-gray-300 cursor-col-resize rounded-md">
+              <PanelResizeHandle className="w-2 bg-gray-200 flex justify-center items-center hover:bg-gray-300 cursor-col-resize rounded-md">
                 <DragHandleDots2Icon />
               </PanelResizeHandle>
             )}

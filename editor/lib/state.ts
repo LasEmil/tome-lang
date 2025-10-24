@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { EdgesMap, NodeNetwork } from "../../dsl/types.ts";
+import type { Diagnostic } from "../../lsp/types.ts";
 
 type Panel = {
   id: string;
@@ -68,4 +69,19 @@ export const useNodeNetworkStore = create<NodeNetworkStore>((set, get) => ({
   },
 
   setLoading: (loading: boolean) => set({ loading }),
+}));
+
+type DiagnosticStoreState = {
+  diagnostics: Diagnostic[];
+};
+
+type DiagnosticStoreActions = {
+  setDiagnostics: (diagnostics: Diagnostic[]) => void;
+  clearDiagnostics: () => void;
+};
+type DiagnosticStore = DiagnosticStoreState & DiagnosticStoreActions;
+export const useDiagnosticStore = create<DiagnosticStore>((set) => ({
+  diagnostics: [],
+  setDiagnostics: (diagnostics: Diagnostic[]) => set({ diagnostics }),
+  clearDiagnostics: () => set({ diagnostics: [] }),
 }));
