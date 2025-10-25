@@ -154,7 +154,6 @@ class LSPServer {
           },
         };
         this.sendNotification("textDocument/definition", result);
-        console.log(defNode);
       }
     }
     this.logger.warn("Node definition not found for:", nodeId);
@@ -184,7 +183,6 @@ class LSPServer {
     const tree = this.parser?.parse(content);
     this.tree = tree || null;
 
-    console.log(JSON.stringify(tree?.rootNode.toString(), null, 2));
     const parseResult = this.adapter?.convert(tree!, content);
     if (parseResult?.value && parseResult?.valid) {
       const nodes = TreeSitterAdapter.getNodeNetwork(parseResult.value);

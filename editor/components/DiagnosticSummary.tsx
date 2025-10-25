@@ -16,8 +16,6 @@ import { Separator } from "./ui/separator.tsx";
 
 export default function DiagnosticSummary() {
   const diagnostics = useDiagnosticStore((state) => state.diagnostics);
-  // const diagnostics = [];
-  console.log("Diagnostics in Summary:", diagnostics);
   const errors = diagnostics.filter((d) => d.severity === MarkerSeverity.Error);
   const warnings = diagnostics.filter(
     (d) => d.severity === MarkerSeverity.Warning,

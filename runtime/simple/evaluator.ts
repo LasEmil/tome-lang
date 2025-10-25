@@ -1,3 +1,4 @@
+import type { SyntaxNode } from "web-tree-sitter";
 import { RuntimeError } from "./errors.ts";
 import type { VariableStore } from "./variableStore.ts";
 
@@ -7,7 +8,7 @@ export class ExpressionEvaluator {
     private sourceCode: string,
   ) {}
 
-  evaluate(node: any): any {
+  evaluate(node?: SyntaxNode): unknown {
     if (!node) return 0;
 
     const type = node.type;
@@ -22,8 +23,9 @@ export class ExpressionEvaluator {
         let operator = "";
         for (let i = 0; i < node.childCount; i++) {
           const child = node.children[i];
-          if (!child.isNamed) {
-            const text = child.text;
+          if (!child?.isNamed) {
+            const text = child?.text;
+            if (text === undefined) continue;
             if (
               [
                 "+",
@@ -103,7 +105,7 @@ export class ExpressionEvaluator {
       // Find the identifier (skip '@' symbol)
       const identifier =
         node.namedChildren[0] ||
-        node.children.find((c: any) => c.type === "identifier");
+        node.children.find((c) => c.type === "identifier");
       if (identifier) {
         return this.variables.get(identifier.text);
       }
@@ -114,7 +116,7 @@ export class ExpressionEvaluator {
 
     // Unary operations
     if (type === "unary_expression") {
-      const operator = node.children[0].text;
+      const operator = node.children[0]?.text;
       const operand = this.evaluate(node.children[1]);
       return this.evaluateUnaryOp(operator, operand);
     }
@@ -122,12 +124,17 @@ export class ExpressionEvaluator {
     // Function calls (random, etc.)
     if (type === "function_call") {
       const functionName = node.children.find(
-        (c: any) => c.type === "identifier",
+        (c) => c.type === "identifier",
       )?.text;
-      const argsNode = node.children.find(
-        (c: any) => c.type === "argument_list",
-      );
+      const argsNode = node.children.find((c) => c.type === "argument_list");
       const args = this.evaluateArguments(argsNode);
+      if (!functionName) {
+        throw new RuntimeError(
+          "Function name not found",
+          node.startPosition.row,
+          node.startPosition.column,
+        );
+      }
       return this.callFunction(functionName, args);
     }
 
@@ -143,7 +150,7 @@ export class ExpressionEvaluator {
     );
   }
 
-  private evaluateBinaryOp(op: string, left: any, right: any): any {
+  private evaluateBinaryOp(op: string, left: unknown, right: unknown): unknown {
     switch (op) {
       case "+":
         // String concatenation if either side is string
@@ -158,18 +165,19 @@ export class ExpressionEvaluator {
       case "*":
         return Number(left) * Number(right);
 
-      case "/":
+      case "/": {
         const divisor = Number(right);
         if (divisor === 0) {
           throw new RuntimeError("Division by zero");
         }
         return Number(left) / divisor;
+      }
 
       case "==":
-        return left == right; // eslint-disable-line eqeqeq
+        return left == right;
 
       case "!=":
-        return left != right; // eslint-disable-line eqeqeq
+        return left != right;
 
       case ">":
         return Number(left) > Number(right);
@@ -194,7 +202,7 @@ export class ExpressionEvaluator {
     }
   }
 
-  private evaluateUnaryOp(op: string, operand: any): any {
+  private evaluateUnaryOp(op?: string, operand?: unknown): unknown {
     switch (op) {
       case "!":
         return !operand;
@@ -205,20 +213,20 @@ export class ExpressionEvaluator {
     }
   }
 
-  private evaluateArguments(argsNode: any): any[] {
+  private evaluateArguments(argsNode?: SyntaxNode): unknown[] {
     if (!argsNode) return [];
 
-    const args: any[] = [];
+    const args: unknown[] = [];
     for (let i = 0; i < argsNode.childCount; i++) {
       const child = argsNode.children[i];
-      if (child.type === "expression") {
+      if (child?.type === "expression") {
         args.push(this.evaluate(child));
       }
     }
     return args;
   }
 
-  private callFunction(name: string, args: any[]): any {
+  private callFunction(name: string, args: unknown[]): unknown {
     if (name === "random") {
       if (args.length !== 2) {
         throw new RuntimeError(
@@ -253,6 +261,7 @@ export class ExpressionEvaluator {
         // This is a simplified version - you might want to enhance this
         return String(this.variables.get(trimmed));
       } catch (error) {
+        console.error("Interpolation error:", error);
         return match; // Return original if evaluation fails
       }
     });

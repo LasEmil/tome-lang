@@ -111,9 +111,6 @@ export const useMonaco = (
   }
 
   useEffect(() => {
-    console.log("Loading Monaco editor");
-    console.log(editorRef);
-
     if (!editorRef) {
       loadEditor(ref).then((result) => {
         if (result?.editor) {

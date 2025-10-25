@@ -9,9 +9,10 @@ import type {
   UserChoice,
 } from "./types.ts";
 import { RuntimeError } from "./errors.ts";
+import type { SyntaxNode, Tree } from "web-tree-sitter";
 
 export class TomeRuntime {
-  private tree: any;
+  private tree: Tree;
   private sourceCode: string;
   private variables: VariableStore;
   private evaluator: ExpressionEvaluator;
@@ -19,13 +20,15 @@ export class TomeRuntime {
   private maxGotoDepth: number;
   private visitedNodes: string[] = [];
   private frameCount: number = 0;
-  private nodeMap: Map<string, any> = new Map();
+  private nodeMap: Map<string, SyntaxNode> = new Map();
 
-  constructor(tree: any, sourceCode: string, options?: RuntimeOptions) {
+  constructor(tree: Tree, sourceCode: string, options?: RuntimeOptions) {
     this.tree = tree;
     this.sourceCode = sourceCode;
     this.maxGotoDepth = options?.maxGotoDepth ?? 100;
-    this.callbacks = options?.callbacks;
+    if (options?.callbacks) {
+      this.callbacks = options?.callbacks;
+    }
 
     // Initialize variable store with callbacks
     this.variables = new VariableStore(
@@ -50,7 +53,7 @@ export class TomeRuntime {
 
     for (let i = 0; i < rootNode.childCount; i++) {
       const child = rootNode.children[i];
-      if (child.type === "node_definition") {
+      if (child?.type === "node_definition") {
         const nameNode = child.childForFieldName("name");
         if (nameNode) {
           const nodeName = nameNode.text;
@@ -94,7 +97,16 @@ export class TomeRuntime {
         }
 
         // Jump to selected node
-        currentNode = frame.choices[userChoice.choiceIndex].target;
+        const target = frame.choices[userChoice.choiceIndex]?.target;
+        if (!target) {
+          throw new RuntimeError(
+            `Choice target not found for index: ${userChoice.choiceIndex}`,
+            undefined,
+            undefined,
+            currentNode,
+          );
+        }
+        currentNode = target;
 
         // Validate target node exists
         if (!this.nodeMap.has(currentNode)) {
@@ -148,18 +160,18 @@ export class TomeRuntime {
         const stmt = nodeDefinition.namedChildren[i];
 
         // Skip the name identifier (first named child)
-        if (i === 0 && stmt.type === "identifier") continue;
+        if (i === 0 && stmt?.type === "identifier") continue;
 
         try {
-          if (stmt.type === "say_statement") {
+          if (stmt?.type === "say_statement") {
             const text = this.processSayStatement(stmt);
             dialogue.push(text);
             this.callbacks?.onDialogueCollected?.(text);
-          } else if (stmt.type === "assignment_statement") {
+          } else if (stmt?.type === "assignment_statement") {
             this.processAssignment(stmt, currentNodeId);
-          } else if (stmt.type === "goto_statement") {
+          } else if (stmt?.type === "goto_statement") {
             gotoTarget = this.processGoto(stmt);
-          } else if (stmt.type === "choice_statement") {
+          } else if (stmt?.type === "choice_statement") {
             hasChoices = true;
           }
         } catch (error) {
@@ -201,16 +213,16 @@ export class TomeRuntime {
     throw new RuntimeError("Unexpected end of frame collection");
   }
 
-  private processSayStatement(stmt: any): string {
+  private processSayStatement(stmt?: SyntaxNode): string {
     const stringLiteral =
-      stmt.childForFieldName("text") ||
-      stmt.children.find((c: any) => c.type === "string_literal");
+      stmt?.childForFieldName("text") ||
+      stmt?.children.find((c) => c.type === "string_literal");
 
     if (!stringLiteral) {
       throw new RuntimeError(
         "Say statement missing text",
-        stmt.startPosition.row,
-        stmt.startPosition.column,
+        stmt?.startPosition.row,
+        stmt?.startPosition.column,
       );
     }
 
@@ -226,13 +238,13 @@ export class TomeRuntime {
     return text;
   }
 
-  private processAssignment(stmt: any, nodeId: string): void {
+  private processAssignment(stmt: SyntaxNode, nodeId: string): void {
     const variable =
       stmt.childForFieldName("variable") ||
-      stmt.children.find((c: any) => c.type === "variable");
+      stmt.children.find((c) => c.type === "variable");
     const expression =
       stmt.childForFieldName("value") ||
-      stmt.children.find((c: any) => c.type === "expression");
+      stmt.children.find((c) => c.type === "expression");
 
     if (!variable || !expression) {
       throw new RuntimeError(
@@ -244,14 +256,25 @@ export class TomeRuntime {
     }
 
     // Get variable name (skip '@' symbol)
-    const varName = variable.children[1].text;
+    const varName = variable.children[1]?.text;
+    if (!varName) {
+      throw new RuntimeError(
+        "Invalid variable in assignment",
+        stmt.startPosition.row,
+        stmt.startPosition.column,
+        nodeId,
+      );
+    }
 
     // Find operator
     let operator = "=";
     for (let i = 0; i < stmt.childCount; i++) {
       const child = stmt.children[i];
-      if (["+", "-", "*", "/"].some((op) => child.text.includes(op + "="))) {
-        operator = child.text;
+      if (["+", "-", "*", "/"].some((op) => child?.text.includes(op + "="))) {
+        const opText = child?.text;
+        if (opText) {
+          operator = opText;
+        }
         break;
       }
     }
@@ -264,7 +287,7 @@ export class TomeRuntime {
       this.variables.set(varName, value);
     } else {
       const currentValue = this.variables.get(varName);
-      let newValue: any;
+      let newValue: unknown;
 
       switch (operator) {
         case "+=":
@@ -300,10 +323,10 @@ export class TomeRuntime {
     }
   }
 
-  private processGoto(stmt: any): string {
+  private processGoto(stmt: SyntaxNode): string {
     const nodeRef =
       stmt.childForFieldName("target") ||
-      stmt.children.find((c: any) => c.type === "node_reference");
+      stmt.children.find((c) => c.type === "node_reference");
 
     if (!nodeRef) {
       throw new RuntimeError(
@@ -315,11 +338,22 @@ export class TomeRuntime {
 
     const targetNode =
       nodeRef.childForFieldName("target") ||
-      nodeRef.children.find((c: any) => c.type === "identifier");
+      nodeRef.children.find((c) => c.type === "identifier");
+
+    if (!targetNode) {
+      throw new RuntimeError(
+        "Goto target node not found",
+        stmt.startPosition.row,
+        stmt.startPosition.column,
+      );
+    }
     return targetNode.text;
   }
 
-  private collectChoices(nodeDefinition: any, nodeId: string): ChoiceOption[] {
+  private collectChoices(
+    nodeDefinition: SyntaxNode,
+    nodeId: string,
+  ): ChoiceOption[] {
     const choices: ChoiceOption[] = [];
     let choiceIndex = 0;
 
@@ -328,9 +362,9 @@ export class TomeRuntime {
       const child = nodeDefinition.namedChildren[i];
 
       // Skip the name identifier
-      if (i === 0 && child.type === "identifier") continue;
+      if (i === 0 && child?.type === "identifier") continue;
 
-      if (child.type === "choice_statement") {
+      if (child?.type === "choice_statement") {
         const choice = this.processChoice(child, nodeId);
 
         if (choice) {
@@ -346,15 +380,15 @@ export class TomeRuntime {
   }
 
   private processChoice(
-    stmt: any,
+    stmt: SyntaxNode,
     nodeId: string,
   ): { text: string; target: string } | null {
     const textNode = stmt.childForFieldName("text");
     const nodeRef =
       stmt.childForFieldName("target") ||
-      stmt.children.find((c: any) => c.type === "node_reference");
+      stmt.children.find((c) => c.type === "node_reference");
     const conditionClause = stmt.children.find(
-      (c: any) => c.type === "condition_clause",
+      (c) => c.type === "condition_clause",
     );
 
     if (!textNode || !nodeRef) {
@@ -386,7 +420,15 @@ export class TomeRuntime {
     // Get target node name
     const targetNode =
       nodeRef.childForFieldName("target") ||
-      nodeRef.children.find((c: any) => c.type === "identifier");
+      nodeRef.children.find((c) => c.type === "identifier");
+    if (!targetNode) {
+      throw new RuntimeError(
+        "Choice target node not found",
+        stmt.startPosition.row,
+        stmt.startPosition.column,
+        nodeId,
+      );
+    }
     const target = targetNode.text;
 
     return { text, target };
@@ -408,15 +450,15 @@ export class TomeRuntime {
   }
 
   // Utility methods
-  getVariables(): Record<string, any> {
+  getVariables(): Record<string, unknown> {
     return this.variables.getAll();
   }
 
-  getVariable(name: string): any {
+  getVariable(name: string): unknown {
     return this.variables.get(name);
   }
 
-  setVariable(name: string, value: any): void {
+  setVariable(name: string, value: unknown): void {
     this.variables.set(name, value);
   }
 

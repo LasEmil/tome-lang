@@ -9,6 +9,7 @@ import type { monaco } from "../lib/monaco.ts";
 import type { LSPClient } from "../../lsp/client.ts";
 import Header from "./Header.tsx";
 import Player from "./Player.tsx";
+import { useSimpleRuntime } from "../hooks/useSimpleRuntime.ts";
 
 export default function App() {
   const panels = useLayoutState((state) => state.panels);
@@ -20,6 +21,8 @@ export default function App() {
   const onNodeClick = (nodeId: string) => {
     editor?.lspClient?.didSelectNode(nodeId);
   };
+
+  const runtime = useSimpleRuntime({ shouldAutoStart: false });
 
   const panelConfigs = [
     {
@@ -63,7 +66,7 @@ export default function App() {
           order={3}
           className="flex flex-col rounded-md overflow-hidden shadow bg-gradient-to-b from-slate-50 to-slate-100"
         >
-          <Player />
+          <Player runtime={runtime} />
         </Panel>
       ),
     },
@@ -73,7 +76,7 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col bg-gray-200 p-2">
       <Toaster position="bottom-center" />
-      <Header />
+      <Header runtime={runtime} />
       {/* <div> */}
       {/*   <LayoutSwitcher /> */}
       {/* </div> */}

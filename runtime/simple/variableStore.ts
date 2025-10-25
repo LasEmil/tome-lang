@@ -1,21 +1,27 @@
 export class VariableStore {
-  private variables: Map<string, any>;
-  private onChange?: (name: string, oldValue: any, newValue: any) => void;
+  private variables: Map<string, unknown> = new Map();
+  private onChange?: (
+    name: string,
+    oldValue: unknown,
+    newValue: unknown,
+  ) => void;
 
   constructor(
-    initialVariables?: Record<string, any>,
-    onChange?: (name: string, oldValue: any, newValue: any) => void,
+    initialVariables?: Record<string, unknown>,
+    onChange?: (name: string, oldValue: unknown, newValue: unknown) => void,
   ) {
     this.variables = new Map(Object.entries(initialVariables ?? {}));
-    this.onChange = onChange;
+    if (onChange) {
+      this.onChange = onChange;
+    }
   }
 
-  get(name: string): any {
+  get(name: string): unknown {
     // Loose mode: return 0 if variable doesn't exist
     return this.variables.has(name) ? this.variables.get(name) : 0;
   }
 
-  set(name: string, value: any): void {
+  set(name: string, value: unknown): void {
     const oldValue = this.variables.get(name);
     this.variables.set(name, value);
 
@@ -29,7 +35,7 @@ export class VariableStore {
     return this.variables.has(name);
   }
 
-  getAll(): Record<string, any> {
+  getAll(): Record<string, unknown> {
     return Object.fromEntries(this.variables);
   }
 
@@ -37,7 +43,7 @@ export class VariableStore {
     this.variables.clear();
   }
 
-  setState(state: Record<string, any>): void {
+  setState(state: Record<string, unknown>): void {
     this.variables = new Map(Object.entries(state));
   }
 }
