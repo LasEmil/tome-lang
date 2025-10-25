@@ -70,7 +70,7 @@ export class TomeRuntime {
 
     while (currentNode) {
       try {
-        // Collect complete frame (follows goto chains)
+        // Collect complete frame
         const frame = this.collectFrame(currentNode);
         this.frameCount++;
 
@@ -128,89 +128,94 @@ export class TomeRuntime {
 
   private collectFrame(startNodeId: string): DialogueFrame {
     const dialogue: string[] = [];
-    const nodeHistory: string[] = [];
-    let currentNodeId = startNodeId;
-    let gotoDepth = 0;
+    const nodeHistory: string[] = [startNodeId];
 
-    // Follow goto chains, accumulating dialogue
-    while (currentNodeId) {
-      if (gotoDepth++ > this.maxGotoDepth) {
-        throw new RuntimeError(
-          "Infinite goto loop detected",
-          undefined,
-          undefined,
-          currentNodeId,
-        );
-      }
+    this.visitedNodes.push(startNodeId);
+    this.callbacks?.onNodeEnter?.(startNodeId, this.variables.getAll());
 
-      nodeHistory.push(currentNodeId);
-      this.visitedNodes.push(currentNodeId);
-      this.callbacks?.onNodeEnter?.(currentNodeId, this.variables.getAll());
+    const nodeDefinition = this.nodeMap.get(startNodeId);
+    if (!nodeDefinition) {
+      throw new RuntimeError(`Node '${startNodeId}' not found`);
+    }
 
-      const nodeDefinition = this.nodeMap.get(currentNodeId);
-      if (!nodeDefinition) {
-        throw new RuntimeError(`Node '${currentNodeId}' not found`);
-      }
+    let gotoTarget: string | null = null;
+    let hasChoices = false;
 
-      let gotoTarget: string | null = null;
-      let hasChoices = false;
+    // Process all named children (body statements)
+    for (let i = 0; i < nodeDefinition.namedChildCount; i++) {
+      const stmt = nodeDefinition.namedChildren[i];
 
-      // Process all named children (body statements)
-      for (let i = 0; i < nodeDefinition.namedChildCount; i++) {
-        const stmt = nodeDefinition.namedChildren[i];
+      // Skip the name identifier (first named child)
+      if (i === 0 && stmt?.type === "identifier") continue;
 
-        // Skip the name identifier (first named child)
-        if (i === 0 && stmt?.type === "identifier") continue;
-
-        try {
-          if (stmt?.type === "say_statement") {
-            const text = this.processSayStatement(stmt);
-            dialogue.push(text);
-            this.callbacks?.onDialogueCollected?.(text);
-          } else if (stmt?.type === "assignment_statement") {
-            this.processAssignment(stmt, currentNodeId);
-          } else if (stmt?.type === "goto_statement") {
-            gotoTarget = this.processGoto(stmt);
-          } else if (stmt?.type === "choice_statement") {
-            hasChoices = true;
-          }
-        } catch (error) {
-          if (error instanceof RuntimeError) {
-            error.nodeId = currentNodeId;
-          }
-          throw error;
+      try {
+        if (stmt?.type === "say_statement") {
+          const text = this.processSayStatement(stmt);
+          dialogue.push(text);
+          this.callbacks?.onDialogueCollected?.(text);
+        } else if (stmt?.type === "assignment_statement") {
+          this.processAssignment(stmt, startNodeId);
+        } else if (stmt?.type === "goto_statement") {
+          gotoTarget = this.processGoto(stmt);
+        } else if (stmt?.type === "choice_statement") {
+          hasChoices = true;
         }
-      }
-
-      this.callbacks?.onNodeExit?.(currentNodeId);
-
-      // If goto exists and no choices, continue to next node
-      if (gotoTarget && !hasChoices) {
-        currentNodeId = gotoTarget;
-      } else {
-        // No goto, or choices exist - collect choices and return frame
-        const choices = this.collectChoices(nodeDefinition, currentNodeId);
-
-        if (choices.length === 0 && hasChoices) {
-          throw new RuntimeError(
-            "All conditional choices evaluated to false, dialogue has no valid options",
-            undefined,
-            undefined,
-            currentNodeId,
-          );
+      } catch (error) {
+        if (error instanceof RuntimeError) {
+          error.nodeId = startNodeId;
         }
-
-        return {
-          nodeId: startNodeId,
-          nodeHistory,
-          dialogue,
-          choices,
-          variables: this.variables.getAll(),
-        };
+        throw error;
       }
     }
 
-    throw new RuntimeError("Unexpected end of frame collection");
+    this.callbacks?.onNodeExit?.(startNodeId);
+
+    // If goto exists and no choices, emit a frame with "continue" choice
+    if (gotoTarget && !hasChoices) {
+      // Validate goto target exists
+      if (!this.nodeMap.has(gotoTarget)) {
+        throw new RuntimeError(
+          `Goto target node '${gotoTarget}' not found`,
+          undefined,
+          undefined,
+          startNodeId,
+        );
+      }
+
+      return {
+        nodeId: startNodeId,
+        nodeHistory,
+        dialogue,
+        choices: [
+          {
+            text: "Continue",
+            target: gotoTarget,
+            index: 0,
+          },
+        ],
+        variables: this.variables.getAll(),
+      };
+    }
+
+    // No goto, or choices exist - collect choices and return frame
+    const choices = this.collectChoices(nodeDefinition, startNodeId);
+
+    if (choices.length === 0 && hasChoices) {
+      throw new RuntimeError(
+        "All conditional choices evaluated to false, dialogue has no valid options",
+        undefined,
+        undefined,
+        startNodeId,
+      );
+    }
+
+    return {
+      nodeId: startNodeId,
+      nodeHistory,
+      dialogue,
+      choices,
+      variables: this.variables.getAll(),
+    };
   }
 
   private processSayStatement(stmt?: SyntaxNode): string {

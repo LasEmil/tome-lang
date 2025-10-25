@@ -1,3 +1,4 @@
+import { useLayoutState } from "../lib/state.ts";
 import {
   Menubar,
   MenubarContent,
@@ -12,6 +13,7 @@ import {
 } from "./ui/menubar.tsx";
 
 export function Menu() {
+  const toggle = useLayoutState((state) => state.toggle);
   return (
     <Menubar>
       <MenubarMenu>
@@ -60,13 +62,13 @@ export function Menu() {
       <MenubarMenu>
         <MenubarTrigger>View</MenubarTrigger>
         <MenubarContent>
-          <MenubarItem>
+          <MenubarItem onClick={() => toggle("editor")}>
             Hide Editor<MenubarShortcut>⌘HE</MenubarShortcut>
           </MenubarItem>
-          <MenubarItem>
+          <MenubarItem onClick={() => toggle("preview")}>
             Hide Visualisation<MenubarShortcut>⌘HV</MenubarShortcut>
           </MenubarItem>
-          <MenubarItem>
+          <MenubarItem onClick={() => toggle("player")}>
             Hide Player<MenubarShortcut>⌘HP</MenubarShortcut>
           </MenubarItem>
         </MenubarContent>

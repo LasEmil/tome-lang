@@ -126,8 +126,6 @@ export class ExpressionEvaluator {
       const functionName = node.children.find(
         (c) => c.type === "identifier",
       )?.text;
-      const argsNode = node.children.find((c) => c.type === "argument_list");
-      const args = this.evaluateArguments(argsNode);
       if (!functionName) {
         throw new RuntimeError(
           "Function name not found",
@@ -135,6 +133,8 @@ export class ExpressionEvaluator {
           node.startPosition.column,
         );
       }
+
+      const args = this.evaluateFunctionArguments(node);
       return this.callFunction(functionName, args);
     }
 
@@ -212,22 +212,41 @@ export class ExpressionEvaluator {
         throw new RuntimeError(`Unknown unary operator: ${op}`);
     }
   }
-
-  private evaluateArguments(argsNode?: SyntaxNode): unknown[] {
-    if (!argsNode) return [];
-
+  private evaluateFunctionArguments(functionNode: SyntaxNode): unknown[] {
     const args: unknown[] = [];
-    for (let i = 0; i < argsNode.childCount; i++) {
-      const child = argsNode.children[i];
+
+    // Skip the identifier, collect expression children
+    for (let i = 0; i < functionNode.namedChildCount; i++) {
+      const child = functionNode.namedChildren[i];
+      // Skip the function name identifier
+      if (child?.type === "identifier") continue;
+
       if (child?.type === "expression") {
         args.push(this.evaluate(child));
       }
     }
+
+    return args;
+  }
+  private evaluateArguments(argsNode?: SyntaxNode): unknown[] {
+    console.log("Evaluating arguments node:", argsNode);
+    if (!argsNode) return [];
+
+    const args: unknown[] = [];
+    for (let i = 0; i < argsNode.namedChildCount; i++) {
+      console.log("Arg child type:", argsNode.namedChildren[i]);
+      const child = argsNode.namedChildren[i];
+      if (child?.type === "expression") {
+        args.push(this.evaluate(child));
+      }
+    }
+    console.log("Evaluated arguments:", args);
     return args;
   }
 
   private callFunction(name: string, args: unknown[]): unknown {
     if (name === "random") {
+      console.log("Calling random with args:", args);
       if (args.length !== 2) {
         throw new RuntimeError(
           `random() requires exactly 2 arguments, got ${args.length}`,

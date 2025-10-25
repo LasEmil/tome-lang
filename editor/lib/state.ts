@@ -10,6 +10,7 @@ type Panel = {
 type LayoutStoreState = { panels: Record<Panel["id"], Panel> };
 type LayoutStoreActions = {
   updatePanels: (newPanelsArray: string[]) => void;
+  toggle: (name: string) => void;
 };
 
 type LayoutStore = LayoutStoreState & LayoutStoreActions;
@@ -18,6 +19,17 @@ export const useLayoutState = create<LayoutStore>((set) => ({
     editor: { id: "editor", name: "Editor", value: true },
     preview: { id: "preview", name: "Preview", value: true },
     player: { id: "player", name: "Player", value: true },
+  },
+  toggle: (name: string) => {
+    set((state) => ({
+      panels: {
+        ...state.panels,
+        [name]: {
+          ...state.panels[name],
+          value: !state.panels[name]?.value,
+        } as Panel,
+      },
+    }));
   },
   updatePanels: (newPanelsArray: string[]) =>
     set((state) => {
